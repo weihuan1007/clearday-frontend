@@ -1,0 +1,88 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: frontend-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Sync frontend to S3
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
+      AWS_FRONTEND_BUCKET: ${{ vars.AWS_FRONTEND_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      FRONTEND_API_BASE: ${{ vars.FRONTEND_API_BASE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check frontend JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in *.js; do
+            node --check "$file"
+          done
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Write frontend runtime config
+        shell: bash
+        run: |
+          set -euo pipefail
+          API_BASE="${FRONTEND_API_BASE:-/api}"
+          export API_BASE
+          node -e "const fs=require('fs'); const apiBase=process.env.API_BASE; fs.writeFileSync('config.js', 'window.CLEARDAY_CONFIG = ' + JSON.stringify({ apiBase }, null, 2) + ';\\n');"
+          node --check config.js
+
+      - name: Upload cacheable assets to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3 sync . "s3://$AWS_FRONTEND_BUCKET" \
+            --delete \
+            --exclude ".git/*" \
+            --exclude ".github/*" \
+            --exclude ".gitignore" \
+            --exclude "README.md" \
+            --exclude "index.html" \
+            --exclude "config.js" \
+            --exclude "config.example.js" \
+            --cache-control "public,max-age=31536000,immutable"
+
+      - name: Upload HTML and runtime config to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3 cp index.html "s3://$AWS_FRONTEND_BUCKET/index.html" \
+            --content-type "text/html; charset=utf-8" \
+            --cache-control "no-cache"
+          aws s3 cp config.js "s3://$AWS_FRONTEND_BUCKET/config.js" \
+            --content-type "application/javascript; charset=utf-8" \
+            --cache-control "no-cache"
+
+      - name: Invalidate CloudFront cache
+        if: env.CLOUDFRONT_DISTRIBUTION_ID != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/index.html" "/config.js" "/dates.js" "/storage.js" "/api.js" "/app.js" "/styles.css"

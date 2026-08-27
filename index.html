@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClearDay Reminder Calendar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar" aria-label="Application header">
+        <div>
+          <p class="eyebrow">Reminder calendar</p>
+          <h1>ClearDay</h1>
+          <p id="syncStatus" class="sync-status">Connecting</p>
+        </div>
+        <div class="month-actions" aria-label="Calendar navigation">
+          <button class="icon-button" type="button" id="prevMonth" aria-label="Previous month">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <button class="text-button" type="button" id="todayButton">Today</button>
+          <button class="icon-button" type="button" id="nextMonth" aria-label="Next month">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <section class="calendar-panel" aria-labelledby="monthTitle">
+          <div class="calendar-heading">
+            <div>
+              <h2 id="monthTitle">Month</h2>
+              <p id="monthSummary" class="muted">Loading calendar</p>
+            </div>
+            <div class="legend" aria-label="Reminder categories">
+              <span><i class="dot subscription"></i>Subscription</span>
+              <span><i class="dot event"></i>Event</span>
+              <span><i class="dot payment"></i>Payment</span>
+              <span><i class="dot personal"></i>Personal</span>
+            </div>
+          </div>
+
+          <div class="weekdays" aria-hidden="true">
+            <span>Sun</span>
+            <span>Mon</span>
+            <span>Tue</span>
+            <span>Wed</span>
+            <span>Thu</span>
+            <span>Fri</span>
+            <span>Sat</span>
+          </div>
+
+          <div class="calendar-grid" id="calendarGrid" role="grid" aria-label="Monthly reminder calendar"></div>
+        </section>
+
+        <aside class="side-panel" aria-label="Reminder controls">
+          <section class="selected-day" aria-labelledby="selectedTitle">
+            <div class="section-heading">
+              <h2 id="selectedTitle">Selected day</h2>
+              <span id="selectedCount" class="count-pill">0 items</span>
+            </div>
+            <div id="selectedList" class="reminder-list" aria-live="polite"></div>
+          </section>
+
+          <section class="form-section" aria-labelledby="formTitle">
+            <div class="section-heading">
+              <h2 id="formTitle">Add reminder</h2>
+              <button id="cancelEdit" class="subtle-button" type="button" hidden>Cancel edit</button>
+            </div>
+
+            <form id="reminderForm" novalidate>
+              <input type="hidden" id="reminderId" />
+
+              <label for="title">Title</label>
+              <input id="title" name="title" type="text" maxlength="60" placeholder="Spotify, wedding, credit card" required />
+
+              <label for="category">Type</label>
+              <select id="category" name="category">
+                <option value="subscription">Subscription to cancel</option>
+                <option value="event">Important event</option>
+                <option value="payment">Payment or card</option>
+                <option value="personal">Personal reminder</option>
+              </select>
+
+              <label for="date">Reminder date</label>
+              <input id="date" name="date" type="date" required />
+
+              <div class="quick-row" aria-label="Quick date choices">
+                <button class="subtle-button" type="button" data-preset="tomorrow">Tomorrow</button>
+                <button class="subtle-button" type="button" data-preset="month">Next month</button>
+                <button class="subtle-button" type="button" data-preset="year">One year</button>
+              </div>
+
+              <label for="notes">Notes</label>
+              <textarea id="notes" name="notes" rows="3" maxlength="180" placeholder="Cancellation link, venue, or anything you need later"></textarea>
+
+              <p class="form-error" id="formError" aria-live="polite"></p>
+              <button class="primary-button" id="saveButton" type="submit">Save reminder</button>
+            </form>
+          </section>
+
+          <section class="upcoming-section" aria-labelledby="upcomingTitle">
+            <div class="section-heading">
+              <h2 id="upcomingTitle">Next up</h2>
+              <span id="upcomingWindow" class="count-pill">30 days</span>
+            </div>
+            <div id="upcomingList" class="reminder-list compact" aria-live="polite"></div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <template id="emptyTemplate">
+      <div class="empty-state">
+        <strong>No reminders here</strong>
+        <span>This day is free.</span>
+      </div>
+    </template>
+
+    <script src="config.js" defer></script>
+    <script src="dates.js" defer></script>
+    <script src="storage.js" defer></script>
+    <script src="api.js" defer></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
