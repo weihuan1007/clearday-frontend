@@ -2,14 +2,20 @@
   "use strict";
 
   const API_TOKEN_KEY = "clearday.apiToken";
-  const configuredAPIBase = window.CLEARDAY_CONFIG && window.CLEARDAY_CONFIG.apiBase;
+  const runtimeConfig = window.CLEARDAY_CONFIG || {};
+  const configuredAPIBase = runtimeConfig.apiBase;
+  const configuredAPIToken = typeof runtimeConfig.apiToken === "string" ? runtimeConfig.apiToken.trim() : "";
   const apiBase = configuredAPIBase || (window.location.protocol === "file:" ? "" : "/api");
+
+  if (configuredAPIToken) {
+    rememberToken(configuredAPIToken);
+  }
 
   async function request(path, options = {}, allowTokenPrompt = true) {
     const headers = new Headers(options.headers || {});
     headers.set("Content-Type", "application/json");
 
-    const token = localStorage.getItem(API_TOKEN_KEY);
+    const token = getToken();
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
     }
@@ -19,10 +25,14 @@
       headers,
     });
 
+    if (response.status === 401 && configuredAPIToken) {
+      throw new Error("The configured API token was rejected.");
+    }
+
     if (response.status === 401 && allowTokenPrompt) {
       const nextToken = window.prompt("Enter your ClearDay API token");
       if (nextToken) {
-        localStorage.setItem(API_TOKEN_KEY, nextToken.trim());
+        rememberToken(nextToken.trim());
         return request(path, options, false);
       }
     }
@@ -37,6 +47,28 @@
     }
 
     return data;
+  }
+
+  function getToken() {
+    if (configuredAPIToken) {
+      return configuredAPIToken;
+    }
+
+    try {
+      return localStorage.getItem(API_TOKEN_KEY) || "";
+    } catch {
+      return "";
+    }
+  }
+
+  function rememberToken(token) {
+    if (!token) return;
+
+    try {
+      localStorage.setItem(API_TOKEN_KEY, token);
+    } catch {
+      // Private browsing or blocked storage should not break the app.
+    }
   }
 
   window.ClearDayAPI = {

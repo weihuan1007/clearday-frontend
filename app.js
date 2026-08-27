@@ -1,5 +1,5 @@
 const DAYS_IN_VIEW = 42;
-const UPCOMING_DAYS = 30;
+const VALID_PAGES = new Set(["calendar", "events"]);
 const {
   addDays,
   addMonths,
@@ -28,10 +28,15 @@ const elements = {
   monthSummary: document.querySelector("#monthSummary"),
   syncStatus: document.querySelector("#syncStatus"),
   calendarGrid: document.querySelector("#calendarGrid"),
+  calendarActions: document.querySelector("[data-calendar-actions]"),
+  pageLinks: Array.from(document.querySelectorAll("[data-page-link]")),
+  pageViews: Array.from(document.querySelectorAll("[data-page]")),
   selectedTitle: document.querySelector("#selectedTitle"),
   selectedCount: document.querySelector("#selectedCount"),
   selectedList: document.querySelector("#selectedList"),
-  upcomingList: document.querySelector("#upcomingList"),
+  eventsSummary: document.querySelector("#eventsSummary"),
+  eventsByDate: document.querySelector("#eventsByDate"),
+  addFromEvents: document.querySelector("#addFromEvents"),
   form: document.querySelector("#reminderForm"),
   reminderId: document.querySelector("#reminderId"),
   title: document.querySelector("#title"),
@@ -46,15 +51,23 @@ const elements = {
   nextMonth: document.querySelector("#nextMonth"),
   todayButton: document.querySelector("#todayButton"),
   emptyTemplate: document.querySelector("#emptyTemplate"),
+  deleteDialog: document.querySelector("#deleteDialog"),
+  deleteDialogText: document.querySelector("#deleteDialogText"),
+  deleteDialogError: document.querySelector("#deleteDialogError"),
+  confirmDelete: document.querySelector("#confirmDelete"),
+  cancelDelete: document.querySelector("#cancelDelete"),
 };
 
 const state = {
+  activePage: getPageFromLocation(),
   viewDate: startOfMonth(new Date()),
   selectedDate: toISO(new Date()),
   reminders: [],
   storageMode: "loading",
   isLoading: true,
   syncError: "",
+  pendingDeleteId: "",
+  pendingDeleteButton: null,
 };
 
 bindEvents();
@@ -72,6 +85,14 @@ async function init() {
 }
 
 function bindEvents() {
+  window.addEventListener("hashchange", () => {
+    const nextPage = getPageFromLocation();
+    if (nextPage !== state.activePage) {
+      state.activePage = nextPage;
+      render();
+    }
+  });
+
   elements.prevMonth.addEventListener("click", () => {
     state.viewDate = addMonths(state.viewDate, -1);
     render();
@@ -114,6 +135,12 @@ function bindEvents() {
     render();
   });
 
+  elements.addFromEvents.addEventListener("click", () => {
+    clearForm({ keepDate: true });
+    navigateTo("calendar");
+    requestAnimationFrame(() => elements.title.focus());
+  });
+
   elements.form.addEventListener("submit", saveForm);
   elements.cancelEdit.addEventListener("click", () => {
     clearForm({ keepDate: true });
@@ -121,7 +148,21 @@ function bindEvents() {
   });
 
   elements.selectedList.addEventListener("click", handleReminderAction);
-  elements.upcomingList.addEventListener("click", handleReminderAction);
+  elements.eventsByDate.addEventListener("click", handleReminderAction);
+  elements.confirmDelete.addEventListener("click", confirmDeleteReminder);
+  elements.cancelDelete.addEventListener("click", closeDeleteDialog);
+  elements.deleteDialog.addEventListener("cancel", (event) => {
+    if (elements.confirmDelete.disabled) {
+      event.preventDefault();
+      return;
+    }
+    closeDeleteDialog();
+  });
+  elements.deleteDialog.addEventListener("click", (event) => {
+    if (event.target === elements.deleteDialog && !elements.confirmDelete.disabled) {
+      closeDeleteDialog();
+    }
+  });
 }
 
 async function saveForm(event) {
@@ -182,6 +223,16 @@ async function handleReminderAction(event) {
   const reminder = state.reminders.find((item) => item.id === id);
   if (!reminder) return;
 
+  if (button.dataset.action === "delete") {
+    requestDeleteReminder(reminder, button);
+    return;
+  }
+
+  if (button.dataset.action === "edit") {
+    startEditingReminder(reminder);
+    return;
+  }
+
   button.disabled = true;
 
   try {
@@ -195,33 +246,6 @@ async function handleReminderAction(event) {
       });
       state.reminders = state.reminders.map((item) => (item.id === id ? updated : item));
       render();
-      return;
-    }
-
-    if (button.dataset.action === "delete") {
-      await deleteReminder(id);
-      state.reminders = state.reminders.filter((item) => item.id !== id);
-      if (elements.reminderId.value === id) {
-        clearForm({ keepDate: true });
-      }
-      render();
-      return;
-    }
-
-    if (button.dataset.action === "edit") {
-      elements.reminderId.value = reminder.id;
-      elements.title.value = reminder.title;
-      elements.category.value = reminder.category;
-      elements.date.value = reminder.date;
-      elements.notes.value = reminder.notes || "";
-      elements.formTitle.textContent = "Edit reminder";
-      elements.saveButton.textContent = "Update reminder";
-      elements.cancelEdit.hidden = false;
-      state.selectedDate = reminder.date;
-      state.viewDate = startOfMonth(parseISO(reminder.date));
-      clearMessage();
-      render();
-      elements.title.focus();
     }
   } catch (error) {
     showMessage(error.message || "Could not update reminder.", "error");
@@ -231,15 +255,117 @@ async function handleReminderAction(event) {
   }
 }
 
+function requestDeleteReminder(reminder, sourceButton) {
+  state.pendingDeleteId = reminder.id;
+  state.pendingDeleteButton = sourceButton;
+
+  const message = `"${reminder.title}" on ${formatLongDate(reminder.date)} will be removed.`;
+  elements.deleteDialogText.textContent = message;
+  elements.deleteDialogError.textContent = "";
+
+  if (typeof elements.deleteDialog.showModal === "function") {
+    sourceButton.blur();
+    elements.deleteDialog.showModal();
+    elements.cancelDelete.focus();
+    return;
+  }
+
+  if (window.confirm(`Delete this reminder?\n\n${message}`)) {
+    void confirmDeleteReminder();
+  }
+}
+
+async function confirmDeleteReminder() {
+  const id = state.pendingDeleteId;
+  if (!id) {
+    closeDeleteDialog();
+    return;
+  }
+
+  const sourceButton = state.pendingDeleteButton;
+  elements.confirmDelete.disabled = true;
+  elements.cancelDelete.disabled = true;
+  if (sourceButton) {
+    sourceButton.disabled = true;
+  }
+
+  try {
+    await deleteReminder(id);
+    state.reminders = state.reminders.filter((item) => item.id !== id);
+
+    if (elements.reminderId.value === id) {
+      clearForm({ keepDate: true });
+    }
+
+    closeDeleteDialog();
+    showMessage("Reminder deleted.", "success");
+    render();
+  } catch (error) {
+    elements.deleteDialogError.textContent = error.message || "Could not delete reminder.";
+  } finally {
+    elements.confirmDelete.disabled = false;
+    elements.cancelDelete.disabled = false;
+    if (sourceButton && document.contains(sourceButton)) {
+      sourceButton.disabled = false;
+    }
+  }
+}
+
+function closeDeleteDialog() {
+  if (elements.deleteDialog.open) {
+    elements.deleteDialog.close();
+  }
+
+  state.pendingDeleteId = "";
+  state.pendingDeleteButton = null;
+  elements.deleteDialogError.textContent = "";
+}
+
+function startEditingReminder(reminder) {
+  elements.reminderId.value = reminder.id;
+  elements.title.value = reminder.title;
+  elements.category.value = reminder.category;
+  elements.date.value = reminder.date;
+  elements.notes.value = reminder.notes || "";
+  elements.formTitle.textContent = "Edit reminder";
+  elements.saveButton.textContent = "Update reminder";
+  elements.cancelEdit.hidden = false;
+  state.selectedDate = reminder.date;
+  state.viewDate = startOfMonth(parseISO(reminder.date));
+  clearMessage();
+  navigateTo("calendar");
+  render();
+  requestAnimationFrame(() => elements.title.focus());
+}
+
 function render() {
+  renderActivePage();
   renderCalendar();
   renderSelectedDay();
-  renderUpcoming();
+  renderEventsPage();
   renderSyncStatus();
 
   if (!elements.date.value) {
     resetFormDate();
   }
+}
+
+function renderActivePage() {
+  elements.pageViews.forEach((view) => {
+    const isActive = view.dataset.page === state.activePage;
+    view.hidden = !isActive;
+    view.classList.toggle("is-active", isActive);
+  });
+
+  elements.pageLinks.forEach((link) => {
+    if (link.dataset.pageLink === state.activePage) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
+
+  elements.calendarActions.hidden = state.activePage !== "calendar";
 }
 
 function renderCalendar() {
@@ -350,30 +476,51 @@ function renderSelectedDay() {
   });
 }
 
-function renderUpcoming() {
-  const today = startOfDay(new Date());
-  const windowEnd = addDays(today, UPCOMING_DAYS);
-  const upcoming = state.reminders
-    .filter((reminder) => {
-      const date = parseISO(reminder.date);
-      return !reminder.isDone && date >= today && date <= windowEnd;
-    })
-    .sort(sortByDateThenTitle);
-
-  elements.upcomingList.innerHTML = "";
+function renderEventsPage() {
+  const groups = getReminderDateGroups();
+  const total = state.reminders.length;
+  elements.eventsSummary.textContent = state.isLoading
+    ? "Loading events"
+    : `${total} ${pluralize(total, "reminder")} across ${groups.length} ${pluralize(groups.length, "date")}`;
+  elements.eventsByDate.innerHTML = "";
 
   if (state.isLoading) {
-    elements.upcomingList.append(createEmptyState("Loading", "Checking your next reminders."));
+    elements.eventsByDate.append(createEmptyState("Loading events", "Your saved reminders will appear shortly."));
     return;
   }
 
-  if (!upcoming.length) {
-    elements.upcomingList.append(createEmptyState("Nothing due soon", "The next 30 days are clear."));
+  if (!groups.length) {
+    elements.eventsByDate.append(createEmptyState("No events yet", "Your calendar is clear."));
     return;
   }
 
-  upcoming.slice(0, 6).forEach((reminder) => {
-    elements.upcomingList.append(createReminderCard(reminder, { compact: true }));
+  groups.forEach((group, index) => {
+    const section = document.createElement("section");
+    const headingId = `event-date-${index}`;
+    section.className = "event-date-group";
+    section.setAttribute("aria-labelledby", headingId);
+
+    const heading = document.createElement("div");
+    heading.className = "event-date-heading";
+
+    const title = document.createElement("h3");
+    title.id = headingId;
+    title.textContent = formatShortDate(group.date);
+
+    const count = document.createElement("span");
+    count.className = "count-pill";
+    count.textContent = `${group.items.length} ${pluralize(group.items.length, "item")}`;
+
+    const items = document.createElement("div");
+    items.className = "event-date-items";
+
+    group.items.forEach((reminder) => {
+      items.append(createReminderCard(reminder));
+    });
+
+    heading.append(title, count);
+    section.append(heading, items);
+    elements.eventsByDate.append(section);
   });
 }
 
@@ -392,9 +539,10 @@ function renderSyncStatus() {
   elements.syncStatus.title = state.syncError || "";
 }
 
-function createReminderCard(reminder, options = {}) {
+function createReminderCard(reminder) {
+  const category = reminder.category || "personal";
   const card = document.createElement("article");
-  card.className = `reminder-card ${reminder.category}${reminder.isDone ? " is-done" : ""}`;
+  card.className = `reminder-card ${category}${reminder.isDone ? " is-done" : ""}`;
 
   const titleRow = document.createElement("div");
   titleRow.className = "reminder-title-row";
@@ -404,18 +552,18 @@ function createReminderCard(reminder, options = {}) {
 
   const status = document.createElement("span");
   const statusInfo = getStatus(reminder);
-  status.className = `status-pill ${statusInfo.kind}`;
+  status.className = `status-pill ${statusInfo.kind}`.trim();
   status.textContent = statusInfo.label;
 
   titleRow.append(title, status);
 
   const meta = document.createElement("p");
   meta.className = "reminder-meta";
-  meta.textContent = `${categoryLabels[reminder.category]} - ${formatLongDate(reminder.date)}`;
+  meta.textContent = `${categoryLabels[category] || "Reminder"} - ${formatLongDate(reminder.date)}`;
 
   card.append(titleRow, meta);
 
-  if (reminder.notes && !options.compact) {
+  if (reminder.notes) {
     const notes = document.createElement("p");
     notes.className = "reminder-notes";
     notes.textContent = reminder.notes;
@@ -511,6 +659,22 @@ function getRemindersForDate(iso) {
   return state.reminders.filter((reminder) => reminder.date === iso).sort(sortByDateThenTitle);
 }
 
+function getReminderDateGroups() {
+  const groups = new Map();
+
+  state.reminders
+    .slice()
+    .sort(sortByDateThenTitle)
+    .forEach((reminder) => {
+      if (!groups.has(reminder.date)) {
+        groups.set(reminder.date, []);
+      }
+      groups.get(reminder.date).push(reminder);
+    });
+
+  return Array.from(groups, ([date, items]) => ({ date, items }));
+}
+
 function getStatus(reminder) {
   if (reminder.isDone) {
     return { label: "Done", kind: "" };
@@ -531,6 +695,21 @@ function getStatus(reminder) {
   }
 
   return { label: `${days}d`, kind: "" };
+}
+
+function navigateTo(page) {
+  state.activePage = VALID_PAGES.has(page) ? page : "calendar";
+
+  if (window.location.hash !== `#${state.activePage}`) {
+    window.location.hash = state.activePage;
+  }
+
+  render();
+}
+
+function getPageFromLocation() {
+  const page = window.location.hash.replace("#", "").trim();
+  return VALID_PAGES.has(page) ? page : "calendar";
 }
 
 function clearForm(options = {}) {

@@ -24,6 +24,10 @@ window.CLEARDAY_CONFIG = {
 };
 ```
 
+If you do not want the token popup on your personal deployment, add a GitHub Actions secret named `FRONTEND_API_TOKEN` with the same value as `CLEAR_DAY_API_TOKEN` on the backend. The workflow will write it into `config.js`.
+
+Important: this is convenient, but it is not a private secret after deployment. Anyone who can open your public `config.js` file can read that token.
+
 ## Manual AWS Upload
 
 Upload these files to the root of the S3 frontend bucket:
@@ -54,4 +58,10 @@ AWS_ROLE_TO_ASSUME
 AWS_FRONTEND_BUCKET
 CLOUDFRONT_DISTRIBUTION_ID
 FRONTEND_API_BASE=/api
+```
+
+Optional repository secret:
+
+```text
+FRONTEND_API_TOKEN
 ```
