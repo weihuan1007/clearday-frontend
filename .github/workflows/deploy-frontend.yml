@@ -43,6 +43,16 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Verify AWS deployment access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$AWS_FRONTEND_BUCKET"
+          aws sts get-caller-identity
+          aws s3api list-objects-v2 \
+            --bucket "$AWS_FRONTEND_BUCKET" \
+            --max-items 1 >/dev/null
+
       - name: Write frontend runtime config
         shell: bash
         run: |
