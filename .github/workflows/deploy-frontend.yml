@@ -100,7 +100,7 @@ jobs:
             --exclude "index.html" \
             --exclude "config.js" \
             --exclude "config.example.js" \
-            --cache-control "public,max-age=31536000,immutable"
+            --cache-control "no-cache"
 
       - name: Upload HTML and runtime config to S3
         shell: bash
@@ -120,4 +120,4 @@ jobs:
           set -euo pipefail
           aws cloudfront create-invalidation \
             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
-            --paths "/index.html" "/config.js" "/dates.js" "/storage.js" "/api.js" "/app.js" "/styles.css"
+            --paths "/index.html" "/config.js" "/dates.js" "/storage.js" "/api.js" "/reminder-model.js" "/reminder-repository.js" "/reminder-form.js" "/calendar-view.js" "/app.js" "/styles.css" "/calendar.css" "/components.css" "/responsive.css"

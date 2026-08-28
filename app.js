@@ -1,752 +1,295 @@
-const DAYS_IN_VIEW = 42;
-const VALID_PAGES = new Set(["calendar", "events"]);
-const {
-  addDays,
-  addMonths,
-  daysBetween,
-  endOfMonth,
-  formatLongDate,
-  formatShortDate,
-  parseISO,
-  pluralize,
-  startOfDay,
-  startOfMonth,
-  toISO,
-} = window.ClearDayDates;
-const { loadReminders: loadLocalReminders, saveReminders: saveLocalReminders } = window.ClearDayStorage;
-const api = window.ClearDayAPI;
+(function () {
+  "use strict";
 
-const categoryLabels = {
-  subscription: "Subscription",
-  event: "Event",
-  payment: "Payment",
-  personal: "Personal",
-};
+  const VALID_PAGES = new Set(["calendar", "events"]);
+  const dates = window.ClearDayDates;
+  const model = window.ClearDayReminderModel;
+  const repository = window.ClearDayRepository.create();
+  const view = window.ClearDayCalendarView;
 
-const elements = {
-  monthTitle: document.querySelector("#monthTitle"),
-  monthSummary: document.querySelector("#monthSummary"),
-  syncStatus: document.querySelector("#syncStatus"),
-  calendarGrid: document.querySelector("#calendarGrid"),
-  calendarActions: document.querySelector("[data-calendar-actions]"),
-  pageLinks: Array.from(document.querySelectorAll("[data-page-link]")),
-  pageViews: Array.from(document.querySelectorAll("[data-page]")),
-  selectedTitle: document.querySelector("#selectedTitle"),
-  selectedCount: document.querySelector("#selectedCount"),
-  selectedList: document.querySelector("#selectedList"),
-  eventsSummary: document.querySelector("#eventsSummary"),
-  eventsByDate: document.querySelector("#eventsByDate"),
-  addFromEvents: document.querySelector("#addFromEvents"),
-  form: document.querySelector("#reminderForm"),
-  reminderId: document.querySelector("#reminderId"),
-  title: document.querySelector("#title"),
-  category: document.querySelector("#category"),
-  date: document.querySelector("#date"),
-  notes: document.querySelector("#notes"),
-  formTitle: document.querySelector("#formTitle"),
-  saveButton: document.querySelector("#saveButton"),
-  cancelEdit: document.querySelector("#cancelEdit"),
-  formError: document.querySelector("#formError"),
-  prevMonth: document.querySelector("#prevMonth"),
-  nextMonth: document.querySelector("#nextMonth"),
-  todayButton: document.querySelector("#todayButton"),
-  emptyTemplate: document.querySelector("#emptyTemplate"),
-  deleteDialog: document.querySelector("#deleteDialog"),
-  deleteDialogText: document.querySelector("#deleteDialogText"),
-  deleteDialogError: document.querySelector("#deleteDialogError"),
-  confirmDelete: document.querySelector("#confirmDelete"),
-  cancelDelete: document.querySelector("#cancelDelete"),
-};
+  const elements = {
+    pages: Array.from(document.querySelectorAll("[data-page]")),
+    pageLinks: Array.from(document.querySelectorAll("[data-page-link]")),
+    monthView: document.querySelector("#monthView"),
+    dayView: document.querySelector("#dayView"),
+    monthActions: document.querySelector("[data-month-actions]"),
+    calendarGrid: document.querySelector("#calendarGrid"),
+    selectedList: document.querySelector("#selectedList"),
+    eventsByDate: document.querySelector("#eventsByDate"),
+    prevMonth: document.querySelector("#prevMonth"),
+    nextMonth: document.querySelector("#nextMonth"),
+    today: document.querySelector("#todayButton"),
+    backToMonth: document.querySelector("#backToMonth"),
+    prevDay: document.querySelector("#prevDay"),
+    nextDay: document.querySelector("#nextDay"),
+    dayToday: document.querySelector("#dayTodayButton"),
+    addReminder: document.querySelector("#addReminder"),
+    addDayReminder: document.querySelector("#addDayReminder"),
+    addFromEvents: document.querySelector("#addFromEvents"),
+    deleteDialog: document.querySelector("#deleteDialog"),
+    deleteText: document.querySelector("#deleteDialogText"),
+    deleteError: document.querySelector("#deleteDialogError"),
+    confirmDelete: document.querySelector("#confirmDelete"),
+    cancelDelete: document.querySelector("#cancelDelete"),
+  };
 
-const state = {
-  activePage: getPageFromLocation(),
-  viewDate: startOfMonth(new Date()),
-  selectedDate: toISO(new Date()),
-  reminders: [],
-  storageMode: "loading",
-  isLoading: true,
-  syncError: "",
-  pendingDeleteId: "",
-  pendingDeleteButton: null,
-};
+  const today = dates.startOfDay(new Date());
+  const state = {
+    reminders: [],
+    selectedDate: dates.toISO(today),
+    viewDate: dates.startOfMonth(today),
+    activePage: getPageFromLocation(),
+    calendarMode: "month",
+    isLoading: true,
+    pendingDeleteId: "",
+  };
 
-bindEvents();
-init();
+  const reminderForm = window.ClearDayReminderForm.create(saveReminderFromForm);
 
-async function init() {
+  bindEvents();
   render();
+  void loadReminders();
 
-  try {
-    state.reminders = await loadReminders();
-  } finally {
+  function bindEvents() {
+    window.addEventListener("hashchange", () => {
+      state.activePage = getPageFromLocation();
+      render();
+    });
+
+    elements.prevMonth.addEventListener("click", () => changeMonth(-1));
+    elements.nextMonth.addEventListener("click", () => changeMonth(1));
+    elements.today.addEventListener("click", showCurrentMonth);
+    elements.calendarGrid.addEventListener("click", handleCalendarClick);
+
+    elements.backToMonth.addEventListener("click", showMonth);
+    elements.prevDay.addEventListener("click", () => changeDay(-1));
+    elements.nextDay.addEventListener("click", () => changeDay(1));
+    elements.dayToday.addEventListener("click", () => openDay(dates.toISO(new Date())));
+
+    elements.addReminder.addEventListener("click", () => openNewReminder());
+    elements.addDayReminder.addEventListener("click", () => openNewReminder());
+    elements.addFromEvents.addEventListener("click", () => openNewReminder(dates.toISO(new Date())));
+
+    elements.selectedList.addEventListener("click", handleScheduleClick);
+    elements.eventsByDate.addEventListener("click", handleReminderAction);
+
+    elements.confirmDelete.addEventListener("click", confirmDelete);
+    elements.cancelDelete.addEventListener("click", closeDeleteDialog);
+    elements.deleteDialog.addEventListener("cancel", (event) => {
+      if (elements.confirmDelete.disabled) event.preventDefault();
+    });
+    elements.deleteDialog.addEventListener("click", (event) => {
+      if (event.target === elements.deleteDialog && !elements.confirmDelete.disabled) closeDeleteDialog();
+    });
+  }
+
+  async function loadReminders() {
+    state.reminders = await repository.load();
     state.isLoading = false;
     render();
   }
-}
 
-function bindEvents() {
-  window.addEventListener("hashchange", () => {
-    const nextPage = getPageFromLocation();
-    if (nextPage !== state.activePage) {
-      state.activePage = nextPage;
-      render();
-    }
-  });
-
-  elements.prevMonth.addEventListener("click", () => {
-    state.viewDate = addMonths(state.viewDate, -1);
+  function changeMonth(amount) {
+    state.viewDate = dates.startOfMonth(dates.addMonths(state.viewDate, amount));
     render();
-  });
+  }
 
-  elements.nextMonth.addEventListener("click", () => {
-    state.viewDate = addMonths(state.viewDate, 1);
+  function showCurrentMonth() {
+    const now = new Date();
+    state.selectedDate = dates.toISO(now);
+    state.viewDate = dates.startOfMonth(now);
     render();
-  });
+  }
 
-  elements.todayButton.addEventListener("click", () => {
-    state.viewDate = startOfMonth(new Date());
-    state.selectedDate = toISO(new Date());
-    resetFormDate();
+  function handleCalendarClick(event) {
+    const cell = event.target.closest("[data-date]");
+    if (!cell) return;
+    openDay(cell.dataset.date);
+  }
+
+  function openDay(iso) {
+    state.selectedDate = iso;
+    state.viewDate = dates.startOfMonth(dates.parseISO(iso));
+    state.calendarMode = "day";
+    state.activePage = "calendar";
+    setHash("calendar");
     render();
-  });
+  }
 
-  document.querySelectorAll("[data-preset]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const today = new Date();
-      const preset = button.dataset.preset;
-      const date =
-        preset === "tomorrow"
-          ? addDays(today, 1)
-          : preset === "month"
-            ? addMonths(today, 1)
-            : addMonths(today, 12);
-
-      elements.date.value = toISO(date);
-      clearMessage();
+  function showMonth() {
+    state.calendarMode = "month";
+    render();
+    requestAnimationFrame(() => {
+      const selectedCell = elements.calendarGrid.querySelector(`[data-date="${state.selectedDate}"]`);
+      if (selectedCell) selectedCell.focus();
     });
-  });
+  }
 
-  elements.calendarGrid.addEventListener("click", (event) => {
-    const dayButton = event.target.closest(".day-cell");
-    if (!dayButton) return;
+  function changeDay(amount) {
+    openDay(dates.toISO(dates.addDays(dates.parseISO(state.selectedDate), amount)));
+  }
 
-    state.selectedDate = dayButton.dataset.date;
-    elements.date.value = state.selectedDate;
-    render();
-  });
+  function openNewReminder(date = state.selectedDate, time = "") {
+    reminderForm.open({ date, time });
+  }
 
-  elements.addFromEvents.addEventListener("click", () => {
-    clearForm({ keepDate: true });
-    navigateTo("calendar");
-    requestAnimationFrame(() => elements.title.focus());
-  });
-
-  elements.form.addEventListener("submit", saveForm);
-  elements.cancelEdit.addEventListener("click", () => {
-    clearForm({ keepDate: true });
-    render();
-  });
-
-  elements.selectedList.addEventListener("click", handleReminderAction);
-  elements.eventsByDate.addEventListener("click", handleReminderAction);
-  elements.confirmDelete.addEventListener("click", confirmDeleteReminder);
-  elements.cancelDelete.addEventListener("click", closeDeleteDialog);
-  elements.deleteDialog.addEventListener("cancel", (event) => {
-    if (elements.confirmDelete.disabled) {
-      event.preventDefault();
+  function handleScheduleClick(event) {
+    const timeSlot = event.target.closest("[data-add-time]");
+    if (timeSlot) {
+      openNewReminder(state.selectedDate, timeSlot.dataset.addTime);
       return;
     }
-    closeDeleteDialog();
-  });
-  elements.deleteDialog.addEventListener("click", (event) => {
-    if (event.target === elements.deleteDialog && !elements.confirmDelete.disabled) {
-      closeDeleteDialog();
+    void handleReminderAction(event);
+  }
+
+  async function handleReminderAction(event) {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const reminder = state.reminders.find((item) => item.id === button.dataset.id);
+    if (!reminder) return;
+
+    if (button.dataset.action === "edit") {
+      reminderForm.open({ reminder });
+      return;
     }
-  });
-}
+    if (button.dataset.action === "delete") {
+      requestDelete(reminder);
+      return;
+    }
+    if (button.dataset.action !== "toggle") return;
 
-async function saveForm(event) {
-  event.preventDefault();
-
-  const input = {
-    title: elements.title.value.trim(),
-    category: elements.category.value,
-    date: elements.date.value,
-    notes: elements.notes.value.trim(),
-    isDone: false,
-  };
-  const id = elements.reminderId.value;
-
-  if (!input.title) {
-    showMessage("Add a short title first.", "error");
-    elements.title.focus();
-    return;
+    button.disabled = true;
+    try {
+      const input = reminderInput(reminder, !reminder.isDone);
+      const updated = await repository.save(reminder.id, input, state.reminders);
+      replaceReminder(updated);
+      showToast(updated.isDone ? "Reminder marked done." : "Reminder reopened.");
+    } catch (error) {
+      showToast(error.message || "Could not update reminder.", "error");
+    } finally {
+      button.disabled = false;
+    }
   }
 
-  if (!input.date) {
-    showMessage("Choose the date you want to remember.", "error");
-    elements.date.focus();
-    return;
-  }
-
-  elements.saveButton.disabled = true;
-
-  try {
+  async function saveReminderFromForm(id, input) {
     if (id) {
       const current = state.reminders.find((reminder) => reminder.id === id);
       input.isDone = current ? current.isDone : false;
-      const updated = await saveReminder(id, input);
-      state.reminders = state.reminders.map((reminder) => (reminder.id === id ? updated : reminder));
-      showMessage("Reminder updated.", "success");
-    } else {
-      const created = await saveReminder("", input);
-      state.reminders = [...state.reminders, created];
-      showMessage("Reminder saved.", "success");
     }
+
+    const saved = await repository.save(id, input, state.reminders);
+    if (id) replaceReminder(saved, false);
+    else state.reminders.push(saved);
 
     state.selectedDate = input.date;
-    state.viewDate = startOfMonth(parseISO(input.date));
-    clearForm({ keepDate: true });
+    state.viewDate = dates.startOfMonth(dates.parseISO(input.date));
+    state.calendarMode = "day";
+    state.activePage = "calendar";
+    setHash("calendar");
     render();
-  } catch (error) {
-    showMessage(error.message || "Could not save reminder.", "error");
-  } finally {
-    elements.saveButton.disabled = false;
-  }
-}
-
-async function handleReminderAction(event) {
-  const button = event.target.closest("button[data-action]");
-  if (!button) return;
-
-  const id = button.dataset.id;
-  const reminder = state.reminders.find((item) => item.id === id);
-  if (!reminder) return;
-
-  if (button.dataset.action === "delete") {
-    requestDeleteReminder(reminder, button);
-    return;
+    showToast(id ? "Reminder updated." : "Reminder saved.");
   }
 
-  if (button.dataset.action === "edit") {
-    startEditingReminder(reminder);
-    return;
+  function replaceReminder(updated, shouldRender = true) {
+    state.reminders = state.reminders.map((reminder) => (reminder.id === updated.id ? updated : reminder));
+    if (shouldRender) render();
   }
 
-  button.disabled = true;
-
-  try {
-    if (button.dataset.action === "toggle") {
-      const updated = await saveReminder(id, {
-        title: reminder.title,
-        category: reminder.category,
-        date: reminder.date,
-        notes: reminder.notes || "",
-        isDone: !reminder.isDone,
-      });
-      state.reminders = state.reminders.map((item) => (item.id === id ? updated : item));
-      render();
-    }
-  } catch (error) {
-    showMessage(error.message || "Could not update reminder.", "error");
-    render();
-  } finally {
-    button.disabled = false;
+  function reminderInput(reminder, isDone) {
+    return {
+      title: reminder.title,
+      category: reminder.category,
+      date: reminder.date,
+      time: reminder.time || "",
+      startTime: reminder.time || "",
+      start: reminder.time || "",
+      endTime: reminder.endTime || "",
+      end: reminder.endTime || "",
+      notes: reminder.notes || "",
+      isDone,
+    };
   }
-}
 
-function requestDeleteReminder(reminder, sourceButton) {
-  state.pendingDeleteId = reminder.id;
-  state.pendingDeleteButton = sourceButton;
-
-  const message = `"${reminder.title}" on ${formatLongDate(reminder.date)} will be removed.`;
-  elements.deleteDialogText.textContent = message;
-  elements.deleteDialogError.textContent = "";
-
-  if (typeof elements.deleteDialog.showModal === "function") {
-    sourceButton.blur();
+  function requestDelete(reminder) {
+    state.pendingDeleteId = reminder.id;
+    elements.deleteText.textContent = `"${reminder.title}" on ${model.formatDateTime(reminder)} will be removed.`;
+    elements.deleteError.textContent = "";
     elements.deleteDialog.showModal();
     elements.cancelDelete.focus();
-    return;
   }
 
-  if (window.confirm(`Delete this reminder?\n\n${message}`)) {
-    void confirmDeleteReminder();
-  }
-}
+  async function confirmDelete() {
+    const id = state.pendingDeleteId;
+    if (!id) return closeDeleteDialog();
 
-async function confirmDeleteReminder() {
-  const id = state.pendingDeleteId;
-  if (!id) {
-    closeDeleteDialog();
-    return;
-  }
-
-  const sourceButton = state.pendingDeleteButton;
-  elements.confirmDelete.disabled = true;
-  elements.cancelDelete.disabled = true;
-  if (sourceButton) {
-    sourceButton.disabled = true;
-  }
-
-  try {
-    await deleteReminder(id);
-    state.reminders = state.reminders.filter((item) => item.id !== id);
-
-    if (elements.reminderId.value === id) {
-      clearForm({ keepDate: true });
-    }
-
-    closeDeleteDialog();
-    showMessage("Reminder deleted.", "success");
-    render();
-  } catch (error) {
-    elements.deleteDialogError.textContent = error.message || "Could not delete reminder.";
-  } finally {
-    elements.confirmDelete.disabled = false;
-    elements.cancelDelete.disabled = false;
-    if (sourceButton && document.contains(sourceButton)) {
-      sourceButton.disabled = false;
+    elements.confirmDelete.disabled = true;
+    elements.cancelDelete.disabled = true;
+    try {
+      await repository.remove(id, state.reminders);
+      state.reminders = state.reminders.filter((reminder) => reminder.id !== id);
+      closeDeleteDialog();
+      render();
+      showToast("Reminder deleted.");
+    } catch (error) {
+      elements.deleteError.textContent = error.message || "Could not delete reminder.";
+    } finally {
+      elements.confirmDelete.disabled = false;
+      elements.cancelDelete.disabled = false;
     }
   }
-}
 
-function closeDeleteDialog() {
-  if (elements.deleteDialog.open) {
-    elements.deleteDialog.close();
+  function closeDeleteDialog() {
+    if (elements.deleteDialog.open) elements.deleteDialog.close();
+    state.pendingDeleteId = "";
+    elements.deleteError.textContent = "";
   }
 
-  state.pendingDeleteId = "";
-  state.pendingDeleteButton = null;
-  elements.deleteDialogError.textContent = "";
-}
-
-function startEditingReminder(reminder) {
-  elements.reminderId.value = reminder.id;
-  elements.title.value = reminder.title;
-  elements.category.value = reminder.category;
-  elements.date.value = reminder.date;
-  elements.notes.value = reminder.notes || "";
-  elements.formTitle.textContent = "Edit reminder";
-  elements.saveButton.textContent = "Update reminder";
-  elements.cancelEdit.hidden = false;
-  state.selectedDate = reminder.date;
-  state.viewDate = startOfMonth(parseISO(reminder.date));
-  clearMessage();
-  navigateTo("calendar");
-  render();
-  requestAnimationFrame(() => elements.title.focus());
-}
-
-function render() {
-  renderActivePage();
-  renderCalendar();
-  renderSelectedDay();
-  renderEventsPage();
-  renderSyncStatus();
-
-  if (!elements.date.value) {
-    resetFormDate();
-  }
-}
-
-function renderActivePage() {
-  elements.pageViews.forEach((view) => {
-    const isActive = view.dataset.page === state.activePage;
-    view.hidden = !isActive;
-    view.classList.toggle("is-active", isActive);
-  });
-
-  elements.pageLinks.forEach((link) => {
-    if (link.dataset.pageLink === state.activePage) {
-      link.setAttribute("aria-current", "page");
-    } else {
-      link.removeAttribute("aria-current");
-    }
-  });
-
-  elements.calendarActions.hidden = state.activePage !== "calendar";
-}
-
-function renderCalendar() {
-  const monthName = state.viewDate.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
-  const monthStart = startOfMonth(state.viewDate);
-  const monthEnd = endOfMonth(state.viewDate);
-  const gridStart = addDays(monthStart, -monthStart.getDay());
-  const remindersInMonth = state.reminders.filter((reminder) => {
-    const reminderDate = parseISO(reminder.date);
-    return reminderDate >= monthStart && reminderDate <= monthEnd;
-  });
-  const scheduledDays = new Set(remindersInMonth.map((reminder) => reminder.date)).size;
-  const freeDays = monthEnd.getDate() - scheduledDays;
-
-  elements.monthTitle.textContent = monthName;
-  elements.monthSummary.textContent = state.isLoading
-    ? "Loading reminders"
-    : `${scheduledDays} scheduled ${pluralize(scheduledDays, "day")}, ${freeDays} free ${pluralize(
-        freeDays,
-        "day",
-      )} this month`;
-  elements.calendarGrid.innerHTML = "";
-
-  for (let index = 0; index < DAYS_IN_VIEW; index += 1) {
-    const date = addDays(gridStart, index);
-    const iso = toISO(date);
-    const items = getRemindersForDate(iso);
-    const cell = document.createElement("button");
-    const isCurrentMonth = date.getMonth() === state.viewDate.getMonth();
-    const isToday = iso === toISO(new Date());
-    const isSelected = iso === state.selectedDate;
-
-    cell.type = "button";
-    cell.className = [
-      "day-cell",
-      isCurrentMonth ? "" : "is-muted",
-      isToday ? "is-today" : "",
-      isSelected ? "is-selected" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    cell.dataset.date = iso;
-    cell.setAttribute("role", "gridcell");
-    cell.setAttribute("aria-selected", String(isSelected));
-    cell.setAttribute(
-      "aria-label",
-      `${formatLongDate(iso)}: ${items.length || "no"} ${pluralize(items.length, "reminder")}`,
-    );
-
-    const topLine = document.createElement("span");
-    topLine.className = "day-topline";
-
-    const number = document.createElement("span");
-    number.className = "day-number";
-    number.textContent = String(date.getDate());
-    topLine.append(number);
-
-    if (!items.length && isCurrentMonth && !state.isLoading) {
-      const free = document.createElement("span");
-      free.className = "free-label";
-      free.textContent = "Free";
-      topLine.append(free);
-    }
-
-    const itemWrap = document.createElement("span");
-    itemWrap.className = "day-items";
-
-    items.slice(0, 3).forEach((reminder) => {
-      const chip = document.createElement("span");
-      chip.className = `calendar-chip ${reminder.category}`;
-      chip.textContent = reminder.title;
-      itemWrap.append(chip);
+  function render() {
+    elements.pages.forEach((page) => {
+      const active = page.dataset.page === state.activePage;
+      page.hidden = !active;
+      page.classList.toggle("is-active", active);
+    });
+    elements.pageLinks.forEach((link) => {
+      const active = link.dataset.pageLink === state.activePage;
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
     });
 
-    if (items.length > 3) {
-      const more = document.createElement("span");
-      more.className = "more-chip";
-      more.textContent = `+${items.length - 3} more`;
-      itemWrap.append(more);
+    const dayMode = state.activePage === "calendar" && state.calendarMode === "day";
+    elements.monthView.hidden = dayMode;
+    elements.dayView.hidden = !dayMode;
+    elements.monthActions.hidden = state.activePage !== "calendar" || dayMode;
+
+    view.renderMonth(state);
+    view.renderDay(state);
+    view.renderEvents(state);
+    view.renderSyncStatus(state.isLoading ? "loading" : repository.getMode(), repository.getSyncError());
+  }
+
+  function showToast(message, kind = "success") {
+    let toast = document.querySelector("#appToast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "appToast";
+      toast.className = "toast";
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+      document.body.append(toast);
     }
-
-    cell.append(topLine, itemWrap);
-    elements.calendarGrid.append(cell);
-  }
-}
-
-function renderSelectedDay() {
-  const items = getRemindersForDate(state.selectedDate);
-  elements.selectedTitle.textContent = formatShortDate(state.selectedDate);
-  elements.selectedCount.textContent = `${items.length} ${pluralize(items.length, "item")}`;
-  elements.selectedList.innerHTML = "";
-
-  if (state.isLoading) {
-    elements.selectedList.append(createEmptyState("Loading reminders", "Your calendar will appear shortly."));
-    return;
+    toast.textContent = message;
+    toast.dataset.kind = kind;
+    toast.classList.add("is-visible");
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 2600);
   }
 
-  if (!items.length) {
-    elements.selectedList.append(createEmptyState("No reminders here", "This day is free."));
-    return;
+  function getPageFromLocation() {
+    const page = window.location.hash.replace("#", "").trim();
+    return VALID_PAGES.has(page) ? page : "calendar";
   }
 
-  items.forEach((reminder) => {
-    elements.selectedList.append(createReminderCard(reminder));
-  });
-}
-
-function renderEventsPage() {
-  const groups = getReminderDateGroups();
-  const total = state.reminders.length;
-  elements.eventsSummary.textContent = state.isLoading
-    ? "Loading events"
-    : `${total} ${pluralize(total, "reminder")} across ${groups.length} ${pluralize(groups.length, "date")}`;
-  elements.eventsByDate.innerHTML = "";
-
-  if (state.isLoading) {
-    elements.eventsByDate.append(createEmptyState("Loading events", "Your saved reminders will appear shortly."));
-    return;
+  function setHash(page) {
+    if (window.location.hash !== `#${page}`) window.location.hash = page;
   }
-
-  if (!groups.length) {
-    elements.eventsByDate.append(createEmptyState("No events yet", "Your calendar is clear."));
-    return;
-  }
-
-  groups.forEach((group, index) => {
-    const section = document.createElement("section");
-    const headingId = `event-date-${index}`;
-    section.className = "event-date-group";
-    section.setAttribute("aria-labelledby", headingId);
-
-    const heading = document.createElement("div");
-    heading.className = "event-date-heading";
-
-    const title = document.createElement("h3");
-    title.id = headingId;
-    title.textContent = formatShortDate(group.date);
-
-    const count = document.createElement("span");
-    count.className = "count-pill";
-    count.textContent = `${group.items.length} ${pluralize(group.items.length, "item")}`;
-
-    const items = document.createElement("div");
-    items.className = "event-date-items";
-
-    group.items.forEach((reminder) => {
-      items.append(createReminderCard(reminder));
-    });
-
-    heading.append(title, count);
-    section.append(heading, items);
-    elements.eventsByDate.append(section);
-  });
-}
-
-function renderSyncStatus() {
-  if (!elements.syncStatus) return;
-
-  const labels = {
-    loading: "Connecting",
-    api: "AWS API",
-    local: "Local browser",
-    fallback: "Local fallback",
-  };
-
-  elements.syncStatus.textContent = labels[state.storageMode] || "Local browser";
-  elements.syncStatus.dataset.mode = state.storageMode;
-  elements.syncStatus.title = state.syncError || "";
-}
-
-function createReminderCard(reminder) {
-  const category = reminder.category || "personal";
-  const card = document.createElement("article");
-  card.className = `reminder-card ${category}${reminder.isDone ? " is-done" : ""}`;
-
-  const titleRow = document.createElement("div");
-  titleRow.className = "reminder-title-row";
-
-  const title = document.createElement("strong");
-  title.textContent = reminder.title;
-
-  const status = document.createElement("span");
-  const statusInfo = getStatus(reminder);
-  status.className = `status-pill ${statusInfo.kind}`.trim();
-  status.textContent = statusInfo.label;
-
-  titleRow.append(title, status);
-
-  const meta = document.createElement("p");
-  meta.className = "reminder-meta";
-  meta.textContent = `${categoryLabels[category] || "Reminder"} - ${formatLongDate(reminder.date)}`;
-
-  card.append(titleRow, meta);
-
-  if (reminder.notes) {
-    const notes = document.createElement("p");
-    notes.className = "reminder-notes";
-    notes.textContent = reminder.notes;
-    card.append(notes);
-  }
-
-  const actions = document.createElement("div");
-  actions.className = "reminder-actions";
-  actions.append(
-    createActionButton(reminder, "toggle", reminder.isDone ? "Undo" : "Done", "subtle-button"),
-    createActionButton(reminder, "edit", "Edit", "subtle-button"),
-    createActionButton(reminder, "delete", "Delete", "danger-button"),
-  );
-  card.append(actions);
-
-  return card;
-}
-
-function createActionButton(reminder, action, label, className) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = className;
-  button.dataset.action = action;
-  button.dataset.id = reminder.id;
-  button.textContent = label;
-  return button;
-}
-
-function createEmptyState(title, text) {
-  const fragment = elements.emptyTemplate.content.cloneNode(true);
-  fragment.querySelector("strong").textContent = title;
-  fragment.querySelector("span").textContent = text;
-  return fragment;
-}
-
-async function loadReminders() {
-  if (!api.apiBase) {
-    state.storageMode = "local";
-    return loadLocalReminders();
-  }
-
-  try {
-    const items = await api.request("/reminders");
-    state.storageMode = "api";
-    state.syncError = "";
-    return Array.isArray(items) ? items : [];
-  } catch (error) {
-    state.storageMode = "fallback";
-    state.syncError = error.message;
-    return loadLocalReminders();
-  }
-}
-
-async function saveReminder(id, input) {
-  if (state.storageMode === "api") {
-    return api.request(id ? `/reminders/${encodeURIComponent(id)}` : "/reminders", {
-      method: id ? "PUT" : "POST",
-      body: JSON.stringify(input),
-    });
-  }
-
-  const now = new Date().toISOString();
-  if (id) {
-    const updated = {
-      ...state.reminders.find((reminder) => reminder.id === id),
-      ...input,
-      updatedAt: now,
-    };
-    saveLocalReminders(state.reminders.map((reminder) => (reminder.id === id ? updated : reminder)));
-    return updated;
-  }
-
-  const created = {
-    id: createId(),
-    ...input,
-    createdAt: now,
-    updatedAt: now,
-  };
-  saveLocalReminders([...state.reminders, created]);
-  return created;
-}
-
-async function deleteReminder(id) {
-  if (state.storageMode === "api") {
-    await api.request(`/reminders/${encodeURIComponent(id)}`, { method: "DELETE" });
-    return;
-  }
-
-  saveLocalReminders(state.reminders.filter((reminder) => reminder.id !== id));
-}
-
-function getRemindersForDate(iso) {
-  return state.reminders.filter((reminder) => reminder.date === iso).sort(sortByDateThenTitle);
-}
-
-function getReminderDateGroups() {
-  const groups = new Map();
-
-  state.reminders
-    .slice()
-    .sort(sortByDateThenTitle)
-    .forEach((reminder) => {
-      if (!groups.has(reminder.date)) {
-        groups.set(reminder.date, []);
-      }
-      groups.get(reminder.date).push(reminder);
-    });
-
-  return Array.from(groups, ([date, items]) => ({ date, items }));
-}
-
-function getStatus(reminder) {
-  if (reminder.isDone) {
-    return { label: "Done", kind: "" };
-  }
-
-  const days = daysBetween(startOfDay(new Date()), parseISO(reminder.date));
-
-  if (days < 0) {
-    return { label: "Overdue", kind: "due" };
-  }
-
-  if (days === 0) {
-    return { label: "Today", kind: "due" };
-  }
-
-  if (days <= 7) {
-    return { label: `${days}d`, kind: "soon" };
-  }
-
-  return { label: `${days}d`, kind: "" };
-}
-
-function navigateTo(page) {
-  state.activePage = VALID_PAGES.has(page) ? page : "calendar";
-
-  if (window.location.hash !== `#${state.activePage}`) {
-    window.location.hash = state.activePage;
-  }
-
-  render();
-}
-
-function getPageFromLocation() {
-  const page = window.location.hash.replace("#", "").trim();
-  return VALID_PAGES.has(page) ? page : "calendar";
-}
-
-function clearForm(options = {}) {
-  const keepDate = options.keepDate;
-  elements.reminderId.value = "";
-  elements.title.value = "";
-  elements.category.value = "subscription";
-  elements.notes.value = "";
-  elements.formTitle.textContent = "Add reminder";
-  elements.saveButton.textContent = "Save reminder";
-  elements.cancelEdit.hidden = true;
-
-  if (keepDate) {
-    elements.date.value = state.selectedDate;
-  } else {
-    resetFormDate();
-  }
-}
-
-function resetFormDate() {
-  elements.date.value = state.selectedDate || toISO(new Date());
-}
-
-function showMessage(message, type) {
-  elements.formError.textContent = message;
-  elements.formError.classList.toggle("success", type === "success");
-}
-
-function clearMessage() {
-  elements.formError.textContent = "";
-  elements.formError.classList.remove("success");
-}
-
-function sortByDateThenTitle(a, b) {
-  return a.date.localeCompare(b.date) || a.title.localeCompare(b.title);
-}
-
-function createId() {
-  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
+})();

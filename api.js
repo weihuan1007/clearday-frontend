@@ -20,10 +20,18 @@
       headers.set("Authorization", `Bearer ${token}`);
     }
 
-    const response = await fetch(`${apiBase}${path}`, {
-      ...options,
-      headers,
-    });
+    let response;
+    try {
+      response = await fetch(`${apiBase}${path}`, {
+        ...options,
+        headers,
+      });
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error("Could not reach the ClearDay backend. Check the API deployment and try again.");
+      }
+      throw error;
+    }
 
     if (response.status === 401 && configuredAPIToken) {
       throw new Error("The configured API token was rejected.");

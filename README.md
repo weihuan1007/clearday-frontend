@@ -5,11 +5,18 @@ Static frontend for the ClearDay reminder app.
 ## Files
 
 - `index.html`: page markup
-- `styles.css`: visual design
+- `styles.css`: shared layout and design tokens
+- `calendar.css`: month and hourly calendar views
+- `components.css`: forms, dialogs, buttons, and reminder cards
+- `responsive.css`: mobile and tablet layout rules
 - `dates.js`: date formatting and calendar math helpers
 - `storage.js`: browser localStorage fallback
 - `api.js`: API calls and API token prompt
-- `app.js`: calendar and reminder UI logic
+- `reminder-model.js`: reminder normalization, validation, and formatting
+- `reminder-repository.js`: API and local persistence
+- `reminder-form.js`: add/edit dialog behavior
+- `calendar-view.js`: month, day, and events rendering
+- `app.js`: application state and navigation
 - `config.example.js`: example runtime config
 
 ## Local Preview
@@ -37,8 +44,15 @@ index.html
 dates.js
 storage.js
 api.js
+reminder-model.js
+reminder-repository.js
+reminder-form.js
+calendar-view.js
 app.js
 styles.css
+calendar.css
+components.css
+responsive.css
 config.js
 ```
 
