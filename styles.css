@@ -100,6 +100,36 @@ h3 {
   min-height: 100vh;
 }
 
+.login-view {
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+  place-items: center;
+}
+
+.login-panel {
+  width: min(100%, 380px);
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.login-panel h1 {
+  margin-bottom: 14px;
+  font-size: 32px;
+}
+
+.login-copy {
+  margin-bottom: 22px;
+  color: var(--muted);
+}
+
+.login-button {
+  width: 100%;
+}
+
 .topbar {
   position: sticky;
   z-index: 20;
@@ -196,6 +226,23 @@ h3 {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.account-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+}
+
+.account-email {
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-main {

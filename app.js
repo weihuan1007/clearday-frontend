@@ -1,8 +1,9 @@
 (function () {
   "use strict";
 
-  const VALID_PAGES = new Set(["calendar", "events"]);
+  const VALID_PAGES = new Set(["calendar", "events", "money"]);
   const dates = window.ClearDayDates;
+  const auth = window.ClearDayAuth;
   const model = window.ClearDayReminderModel;
   const repository = window.ClearDayRepository.create();
   const view = window.ClearDayCalendarView;
@@ -45,15 +46,27 @@
   };
 
   const reminderForm = window.ClearDayReminderForm.create(saveReminderFromForm);
+  const moneyPage = window.ClearDayMoneyPage.create();
+  let appStarted = false;
+  const sessionView = window.ClearDaySessionView.create(startApp);
+  sessionView.bind();
+  void sessionView.initialize();
 
-  bindEvents();
-  render();
-  void loadReminders();
+  function startApp() {
+    if (appStarted) return;
+    appStarted = true;
+    state.activePage = getPageFromLocation();
+    bindEvents();
+    render();
+    void loadReminders();
+    if (state.activePage === "money") void moneyPage.load();
+  }
 
   function bindEvents() {
     window.addEventListener("hashchange", () => {
       state.activePage = getPageFromLocation();
       render();
+      if (state.activePage === "money") void moneyPage.load();
     });
 
     elements.prevMonth.addEventListener("click", () => changeMonth(-1));
@@ -84,9 +97,18 @@
   }
 
   async function loadReminders() {
-    state.reminders = await repository.load();
-    state.isLoading = false;
-    render();
+    try {
+      state.reminders = await repository.load();
+      state.isLoading = false;
+      render();
+    } catch (error) {
+      if (auth.isAuthenticationError(error)) {
+        sessionView.showLogin(error.message);
+        return;
+      }
+      state.isLoading = false;
+      view.renderSyncStatus("fallback", error.message || "Could not load reminders.");
+    }
   }
 
   function changeMonth(amount) {
@@ -260,6 +282,7 @@
     elements.monthView.hidden = dayMode;
     elements.dayView.hidden = !dayMode;
     elements.monthActions.hidden = state.activePage !== "calendar" || dayMode;
+    elements.addReminder.hidden = state.activePage === "money";
 
     view.renderMonth(state);
     view.renderDay(state);

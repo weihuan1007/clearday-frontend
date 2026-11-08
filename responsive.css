@@ -47,6 +47,10 @@
     min-width: auto;
   }
 
+  .account-email {
+    display: none;
+  }
+
   .app-main {
     width: calc(100% - 24px);
     padding-top: 16px;
@@ -125,6 +129,11 @@
 @media (max-width: 520px) {
   .topbar {
     grid-template-columns: 1fr auto;
+  }
+
+  .account-actions {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .month-actions .text-button {

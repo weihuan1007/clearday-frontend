@@ -222,17 +222,17 @@
     const groups = model.groupByDate(state.reminders);
     const total = state.reminders.length;
     document.querySelector("#eventsSummary").textContent = state.isLoading
-      ? "Loading events"
+      ? "Loading reminders"
       : `${total} ${dates.pluralize(total, "reminder")} across ${groups.length} ${dates.pluralize(groups.length, "date")}`;
 
     const root = document.querySelector("#eventsByDate");
     root.replaceChildren();
     if (state.isLoading) {
-      root.append(createEmptyState("Loading events", "Your saved reminders will appear shortly."));
+      root.append(createEmptyState("Loading reminders", "Your saved reminders will appear shortly."));
       return;
     }
     if (!groups.length) {
-      root.append(createEmptyState("No events yet", "Your calendar is clear."));
+      root.append(createEmptyState("No reminders yet", "Your calendar is clear."));
       return;
     }
 

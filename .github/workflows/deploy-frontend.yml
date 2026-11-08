@@ -25,7 +25,10 @@ jobs:
       AWS_FRONTEND_BUCKET: ${{ vars.AWS_FRONTEND_BUCKET }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
       FRONTEND_API_BASE: ${{ vars.FRONTEND_API_BASE }}
-      FRONTEND_API_TOKEN: ${{ secrets.FRONTEND_API_TOKEN }}
+      COGNITO_DOMAIN: ${{ vars.COGNITO_DOMAIN }}
+      COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
+      COGNITO_REDIRECT_URI: ${{ vars.COGNITO_REDIRECT_URI }}
+      COGNITO_LOGOUT_URI: ${{ vars.COGNITO_LOGOUT_URI }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,6 +65,12 @@ jobs:
             echo "::error::Missing GitHub Actions variable: AWS_FRONTEND_BUCKET"
             exit 1
           fi
+          for name in COGNITO_DOMAIN COGNITO_CLIENT_ID COGNITO_REDIRECT_URI COGNITO_LOGOUT_URI; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing GitHub Actions variable: $name"
+              exit 1
+            fi
+          done
 
           echo "AWS_REGION=$AWS_REGION"
           echo "AWS_FRONTEND_BUCKET=$AWS_FRONTEND_BUCKET"
@@ -81,10 +90,9 @@ jobs:
         run: |
           set -euo pipefail
           API_BASE="${FRONTEND_API_BASE:-/api}"
-          API_TOKEN="${FRONTEND_API_TOKEN:-}"
           export API_BASE
-          export API_TOKEN
-          node -e "const fs=require('fs'); const apiBase=process.env.API_BASE; const apiToken=process.env.API_TOKEN; const config={ apiBase }; if (apiToken) config.apiToken=apiToken; fs.writeFileSync('config.js', 'window.CLEARDAY_CONFIG = ' + JSON.stringify(config, null, 2) + ';\\n');"
+          export COGNITO_DOMAIN COGNITO_CLIENT_ID COGNITO_REDIRECT_URI COGNITO_LOGOUT_URI
+          node -e "const fs=require('fs'); const config={apiBase:process.env.API_BASE,auth:{domain:process.env.COGNITO_DOMAIN,clientId:process.env.COGNITO_CLIENT_ID,redirectUri:process.env.COGNITO_REDIRECT_URI,logoutUri:process.env.COGNITO_LOGOUT_URI}}; fs.writeFileSync('config.js','window.CLEARDAY_CONFIG = '+JSON.stringify(config,null,2)+';\\n');"
           node --check config.js
 
       - name: Upload cacheable assets to S3
@@ -100,6 +108,8 @@ jobs:
             --exclude "index.html" \
             --exclude "config.js" \
             --exclude "config.example.js" \
+            --exclude "money-flow-*.json" \
+            --exclude "clearday-money-*.json" \
             --cache-control "no-cache"
 
       - name: Upload HTML and runtime config to S3
@@ -120,4 +130,4 @@ jobs:
           set -euo pipefail
           aws cloudfront create-invalidation \
             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
-            --paths "/index.html" "/config.js" "/dates.js" "/storage.js" "/api.js" "/reminder-model.js" "/reminder-repository.js" "/reminder-form.js" "/calendar-view.js" "/app.js" "/styles.css" "/calendar.css" "/components.css" "/responsive.css"
+            --paths "/" "/index.html" "/config.js" "/auth.js" "/session-view.js" "/dates.js" "/storage.js" "/api.js" "/reminder-model.js" "/reminder-repository.js" "/reminder-form.js" "/calendar-view.js" "/app.js" "/styles.css" "/calendar.css" "/components.css" "/responsive.css" "/money-model.js" "/money-repository.js" "/money-page.js" "/money.css"

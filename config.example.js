@@ -3,7 +3,10 @@ window.CLEARDAY_CONFIG = {
   // Use a full URL, such as "https://your-api.example.com/api", when the API is hosted separately.
   apiBase: "/api",
 
-  // Optional convenience for a private personal deployment.
-  // Warning: anyone who can open config.js can read this value.
-  // apiToken: "replace-with-your-api-token",
+  auth: {
+    domain: "https://your-domain.auth.ap-southeast-1.amazoncognito.com",
+    clientId: "your-public-cognito-client-id",
+    redirectUri: "https://your-cloudfront-domain.cloudfront.net/",
+    logoutUri: "https://your-cloudfront-domain.cloudfront.net/",
+  },
 };

@@ -8,6 +8,10 @@ desktop.ini
 # Runtime config generated during deployment
 config.js
 
+# Personal transaction exports
+money-flow-*.json
+clearday-money-*.json
+
 # Local secrets and credentials
 .env
 .env.*

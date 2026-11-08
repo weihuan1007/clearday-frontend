@@ -4,24 +4,38 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f7f8f6" />
-    <title>ClearDay Reminder Calendar</title>
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.amazoncognito.com; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://*.amazoncognito.com" />
+    <title>ClearDay</title>
     <link rel="stylesheet" href="styles.css?v=2" />
     <link rel="stylesheet" href="calendar.css?v=2" />
     <link rel="stylesheet" href="components.css?v=2" />
     <link rel="stylesheet" href="responsive.css?v=2" />
+    <link rel="stylesheet" href="money.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <main id="loginView" class="login-view" hidden>
+      <section class="login-panel" aria-labelledby="loginTitle">
+        <p class="eyebrow">Personal reminders and money</p>
+        <h1 id="loginTitle">ClearDay</h1>
+        <p class="login-copy">Sign in to open your reminders and money records.</p>
+        <p id="loginError" class="form-error" aria-live="polite"></p>
+        <button id="signInButton" class="primary-button login-button" type="button">Sign in securely</button>
+      </section>
+    </main>
+
+    <div id="appShell" class="app-shell" hidden>
       <header class="topbar" aria-label="Application header">
         <div class="brand-block">
-          <p class="eyebrow">Reminder calendar</p>
+          <p class="eyebrow">Reminders and money</p>
           <h1>ClearDay</h1>
           <p id="syncStatus" class="sync-status">Connecting</p>
         </div>
 
         <nav class="view-tabs" aria-label="ClearDay views">
           <a class="view-tab" href="#calendar" data-page-link="calendar" aria-current="page">Calendar</a>
-          <a class="view-tab" href="#events" data-page-link="events">Events</a>
+          <a class="view-tab" href="#events" data-page-link="events">Reminders</a>
+          <a class="view-tab" href="#money" data-page-link="money">Money</a>
         </nav>
 
         <div class="topbar-actions">
@@ -31,6 +45,10 @@
             <button class="icon-button" type="button" id="nextMonth" aria-label="Next month" title="Next month">&rsaquo;</button>
           </div>
           <button class="primary-button topbar-add" id="addReminder" type="button">Add reminder</button>
+          <div class="account-actions">
+            <span id="accountEmail" class="account-email"></span>
+            <button class="subtle-button" id="signOutButton" type="button">Sign out</button>
+          </div>
         </div>
       </header>
 
@@ -85,12 +103,74 @@
           <div class="events-header">
             <div>
               <p class="eyebrow">Saved reminders</p>
-              <h2 id="eventsTitle">Events</h2>
-              <p id="eventsSummary" class="muted">Loading events</p>
+              <h2 id="eventsTitle">Reminders</h2>
+              <p id="eventsSummary" class="muted">Loading reminders</p>
             </div>
             <button class="primary-button" id="addFromEvents" type="button">Add reminder</button>
           </div>
           <div id="eventsByDate" class="events-by-date" aria-live="polite"></div>
+        </section>
+
+        <section id="moneyPage" class="page-view money-page" data-page="money" aria-labelledby="moneyTitle" hidden>
+          <header class="money-header">
+            <div>
+              <p class="eyebrow">Personal ledger · MYR</p>
+              <h2 id="moneyTitle">Money</h2>
+              <p class="muted">Track income, expenses, and transfers.</p>
+            </div>
+            <button id="moneyAdd" class="primary-button" type="button" disabled>Add transaction</button>
+          </header>
+          <p id="moneyStatus" class="muted money-status" role="status"></p>
+
+          <div class="money-panel">
+            <div class="money-toolbar">
+              <div>
+                <label for="moneyMonth">Period</label>
+                <select id="moneyMonth"></select>
+              </div>
+              <div class="money-actions">
+                <button id="moneyImport" class="subtle-button" type="button" disabled>Import JSON</button>
+                <input id="moneyFile" type="file" accept=".json,application/json" hidden />
+                <button id="moneyExport" class="subtle-button" type="button" disabled>Export JSON</button>
+              </div>
+            </div>
+            <dl class="money-totals">
+              <div><dt>Income</dt><dd id="moneyIncome" data-type="income">—</dd></div>
+              <div><dt>Expenses</dt><dd id="moneyExpense" data-type="expense">—</dd></div>
+              <div><dt>Net</dt><dd id="moneyNet">—</dd></div>
+            </dl>
+          </div>
+
+          <div class="money-panel">
+            <h3>Transactions</h3>
+            <div class="money-toolbar">
+              <div>
+                <label for="moneySearch">Search</label>
+                <input id="moneySearch" type="search" placeholder="Note, category, or account" />
+              </div>
+              <div>
+                <label for="moneyTypeFilter">Type</label>
+                <select id="moneyTypeFilter">
+                  <option value="">All types</option>
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                  <option value="transfer">Transfer</option>
+                </select>
+              </div>
+            </div>
+            <p id="moneyEmpty" class="muted"></p>
+            <ul id="moneyList" class="money-list"></ul>
+          </div>
+          <template id="moneyRow">
+            <li class="money-record">
+              <div><strong data-note></strong><span class="muted" data-details></span></div>
+              <strong data-amount></strong>
+              <div class="money-actions">
+                <button class="subtle-button" type="button" data-money-action="edit">Edit</button>
+                <button class="subtle-button" type="button" data-money-action="delete">Delete</button>
+              </div>
+            </li>
+          </template>
         </section>
       </main>
     </div>
@@ -151,6 +231,49 @@
       </form>
     </dialog>
 
+    <dialog id="moneyDialog" class="app-dialog" aria-labelledby="moneyFormTitle">
+      <form id="moneyForm" class="dialog-card">
+        <div class="dialog-heading">
+          <h2 id="moneyFormTitle">Add transaction</h2>
+          <button id="moneyCancel" class="dialog-close" type="button" aria-label="Close transaction form">&times;</button>
+        </div>
+        <div class="form-grid">
+          <div>
+            <label for="moneyType">Type</label>
+            <select id="moneyType" name="type">
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          </div>
+          <div>
+            <label for="moneyAmount">Amount (RM)</label>
+            <input id="moneyAmount" name="amount" inputmode="decimal" maxlength="12" placeholder="0.00" required />
+          </div>
+          <div>
+            <label for="moneyDate">Date</label>
+            <input id="moneyDate" name="date" type="date" required />
+          </div>
+          <div>
+            <label for="moneyCategory">Category</label>
+            <select id="moneyCategory" name="category" required></select>
+          </div>
+          <div class="full-field">
+            <label for="moneyAccount">Account</label>
+            <select id="moneyAccount" name="account" required></select>
+          </div>
+          <div class="full-field">
+            <label for="moneyNote">Note (optional)</label>
+            <input id="moneyNote" name="note" maxlength="80" />
+          </div>
+        </div>
+        <p id="moneyFormError" class="form-error" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button id="moneySave" class="primary-button" type="submit">Save transaction</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="deleteDialog" class="app-dialog" aria-labelledby="deleteDialogTitle">
       <div class="dialog-card confirm-card">
         <div>
@@ -173,14 +296,19 @@
       </div>
     </template>
 
-    <script src="config.js?v=2" defer></script>
-    <script src="dates.js?v=2" defer></script>
-    <script src="storage.js?v=2" defer></script>
-    <script src="api.js?v=2" defer></script>
-    <script src="reminder-model.js?v=2" defer></script>
-    <script src="reminder-repository.js?v=2" defer></script>
-    <script src="reminder-form.js?v=2" defer></script>
-    <script src="calendar-view.js?v=2" defer></script>
-    <script src="app.js?v=2" defer></script>
+    <script src="config.js?v=3" defer></script>
+    <script src="auth.js?v=3" defer></script>
+    <script src="session-view.js?v=4" defer></script>
+    <script src="dates.js?v=3" defer></script>
+    <script src="storage.js?v=3" defer></script>
+    <script src="api.js?v=4" defer></script>
+    <script src="reminder-model.js?v=3" defer></script>
+    <script src="reminder-repository.js?v=3" defer></script>
+    <script src="reminder-form.js?v=3" defer></script>
+    <script src="calendar-view.js?v=4" defer></script>
+    <script src="money-model.js" defer></script>
+    <script src="money-repository.js" defer></script>
+    <script src="money-page.js" defer></script>
+    <script src="app.js?v=4" defer></script>
   </body>
 </html>

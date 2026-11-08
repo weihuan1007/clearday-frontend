@@ -21,6 +21,9 @@
         syncError = "";
         return model.normalizeAll(reminders);
       } catch (error) {
+        if (window.ClearDayAuth.enabled || window.ClearDayAuth.isAuthenticationError(error)) {
+          throw error;
+        }
         mode = "fallback";
         syncError = error.message;
         return model.normalizeAll(local.loadReminders());

@@ -1,21 +1,17 @@
 (function () {
   "use strict";
 
-  const API_TOKEN_KEY = "clearday.apiToken";
   const runtimeConfig = window.CLEARDAY_CONFIG || {};
+  const auth = window.ClearDayAuth;
   const configuredAPIBase = runtimeConfig.apiBase;
   const configuredAPIToken = typeof runtimeConfig.apiToken === "string" ? runtimeConfig.apiToken.trim() : "";
   const apiBase = configuredAPIBase || (window.location.protocol === "file:" ? "" : "/api");
 
-  if (configuredAPIToken) {
-    rememberToken(configuredAPIToken);
-  }
-
-  async function request(path, options = {}, allowTokenPrompt = true) {
+  async function request(path, options = {}) {
     const headers = new Headers(options.headers || {});
     headers.set("Content-Type", "application/json");
 
-    const token = getToken();
+    const token = auth.enabled ? await auth.getAccessToken() : configuredAPIToken;
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
     }
@@ -33,16 +29,13 @@
       throw error;
     }
 
-    if (response.status === 401 && configuredAPIToken) {
-      throw new Error("The configured API token was rejected.");
+    if (response.status === 401 && auth.enabled) {
+      auth.clearSession();
+      window.dispatchEvent(new CustomEvent("clearday:auth-required"));
+      throw new auth.AuthenticationRequiredError("Your session ended. Please sign in again.");
     }
-
-    if (response.status === 401 && allowTokenPrompt) {
-      const nextToken = window.prompt("Enter your ClearDay API token");
-      if (nextToken) {
-        rememberToken(nextToken.trim());
-        return request(path, options, false);
-      }
+    if (response.status === 401) {
+      throw new Error("The configured API token was rejected.");
     }
 
     if (response.status === 204) {
@@ -51,32 +44,12 @@
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new Error((data && data.error) || "Cloud sync failed.");
+      const error = new Error((data && data.error) || "Cloud sync failed.");
+      error.status = response.status;
+      throw error;
     }
 
     return data;
-  }
-
-  function getToken() {
-    if (configuredAPIToken) {
-      return configuredAPIToken;
-    }
-
-    try {
-      return localStorage.getItem(API_TOKEN_KEY) || "";
-    } catch {
-      return "";
-    }
-  }
-
-  function rememberToken(token) {
-    if (!token) return;
-
-    try {
-      localStorage.setItem(API_TOKEN_KEY, token);
-    } catch {
-      // Private browsing or blocked storage should not break the app.
-    }
   }
 
   window.ClearDayAPI = {
