@@ -11,6 +11,7 @@
   const elements = {
     pages: Array.from(document.querySelectorAll("[data-page]")),
     pageLinks: Array.from(document.querySelectorAll("[data-page-link]")),
+    syncStatus: document.querySelector("#syncStatus"),
     monthView: document.querySelector("#monthView"),
     dayView: document.querySelector("#dayView"),
     monthActions: document.querySelector("[data-month-actions]"),
@@ -48,6 +49,7 @@
   const reminderForm = window.ClearDayReminderForm.create(saveReminderFromForm);
   const moneyPage = window.ClearDayMoneyPage.create();
   let appStarted = false;
+  let remindersRequested = false;
   const sessionView = window.ClearDaySessionView.create(startApp);
   sessionView.bind();
   void sessionView.initialize();
@@ -58,15 +60,24 @@
     state.activePage = getPageFromLocation();
     bindEvents();
     render();
-    void loadReminders();
-    if (state.activePage === "money") void moneyPage.load();
+    loadActivePage();
+  }
+
+  function loadActivePage() {
+    // A direct link to Money should not trigger the separate reminder prompt.
+    if (state.activePage === "money") {
+      void moneyPage.load();
+    } else if (!remindersRequested) {
+      remindersRequested = true;
+      void loadReminders();
+    }
   }
 
   function bindEvents() {
     window.addEventListener("hashchange", () => {
       state.activePage = getPageFromLocation();
       render();
-      if (state.activePage === "money") void moneyPage.load();
+      loadActivePage();
     });
 
     elements.prevMonth.addEventListener("click", () => changeMonth(-1));
@@ -283,6 +294,7 @@
     elements.dayView.hidden = !dayMode;
     elements.monthActions.hidden = state.activePage !== "calendar" || dayMode;
     elements.addReminder.hidden = state.activePage === "money";
+    elements.syncStatus.hidden = state.activePage === "money";
 
     view.renderMonth(state);
     view.renderDay(state);

@@ -65,13 +65,6 @@ jobs:
             echo "::error::Missing GitHub Actions variable: AWS_FRONTEND_BUCKET"
             exit 1
           fi
-          for name in COGNITO_DOMAIN COGNITO_CLIENT_ID COGNITO_REDIRECT_URI COGNITO_LOGOUT_URI; do
-            if [ -z "${!name:-}" ]; then
-              echo "::error::Missing GitHub Actions variable: $name"
-              exit 1
-            fi
-          done
-
           echo "AWS_REGION=$AWS_REGION"
           echo "AWS_FRONTEND_BUCKET=$AWS_FRONTEND_BUCKET"
           echo "Checking assumed AWS identity..."
@@ -92,7 +85,23 @@ jobs:
           API_BASE="${FRONTEND_API_BASE:-/api}"
           export API_BASE
           export COGNITO_DOMAIN COGNITO_CLIENT_ID COGNITO_REDIRECT_URI COGNITO_LOGOUT_URI
-          node -e "const fs=require('fs'); const config={apiBase:process.env.API_BASE,auth:{domain:process.env.COGNITO_DOMAIN,clientId:process.env.COGNITO_CLIENT_ID,redirectUri:process.env.COGNITO_REDIRECT_URI,logoutUri:process.env.COGNITO_LOGOUT_URI}}; fs.writeFileSync('config.js','window.CLEARDAY_CONFIG = '+JSON.stringify(config,null,2)+';\\n');"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const config = { apiBase: process.env.API_BASE };
+          const auth = {
+            domain: process.env.COGNITO_DOMAIN,
+            clientId: process.env.COGNITO_CLIENT_ID,
+            redirectUri: process.env.COGNITO_REDIRECT_URI,
+            logoutUri: process.env.COGNITO_LOGOUT_URI,
+          };
+          const values = Object.values(auth);
+          if (values.some(Boolean)) {
+            if (!values.every(Boolean)) throw new Error("Set all four Cognito variables when using Cognito.");
+            config.auth = auth;
+          }
+          // Personal Money keys are entered in the browser and never published to S3.
+          fs.writeFileSync("config.js", "window.CLEARDAY_CONFIG = " + JSON.stringify(config, null, 2) + ";\n");
+          NODE
           node --check config.js
 
       - name: Upload cacheable assets to S3

@@ -118,11 +118,22 @@
               <h2 id="moneyTitle">Money</h2>
               <p class="muted">Track income, expenses, and transfers.</p>
             </div>
-            <button id="moneyAdd" class="primary-button" type="button" disabled>Add transaction</button>
+            <div class="money-actions">
+              <button id="moneyLock" class="subtle-button" type="button" hidden>Lock Money</button>
+              <button id="moneyAdd" class="primary-button" type="button" disabled>Add transaction</button>
+            </div>
           </header>
           <p id="moneyStatus" class="muted money-status" role="status"></p>
 
-          <div class="money-panel">
+          <form id="moneyUnlockForm" class="money-panel money-toolbar" hidden>
+            <div>
+              <label for="moneyAccessKey">Private Money key</label>
+              <input id="moneyAccessKey" type="password" autocomplete="off" required />
+            </div>
+            <button id="moneyUnlock" class="primary-button" type="submit">Unlock Money</button>
+          </form>
+
+          <div class="money-panel" data-money-content>
             <div class="money-toolbar">
               <div>
                 <label for="moneyMonth">Period</label>
@@ -141,7 +152,7 @@
             </dl>
           </div>
 
-          <div class="money-panel">
+          <div class="money-panel" data-money-content>
             <h3>Transactions</h3>
             <div class="money-toolbar">
               <div>
@@ -301,14 +312,14 @@
     <script src="session-view.js?v=4" defer></script>
     <script src="dates.js?v=3" defer></script>
     <script src="storage.js?v=3" defer></script>
-    <script src="api.js?v=4" defer></script>
+    <script src="api.js?v=5" defer></script>
     <script src="reminder-model.js?v=3" defer></script>
     <script src="reminder-repository.js?v=3" defer></script>
     <script src="reminder-form.js?v=3" defer></script>
     <script src="calendar-view.js?v=4" defer></script>
     <script src="money-model.js" defer></script>
-    <script src="money-repository.js" defer></script>
-    <script src="money-page.js" defer></script>
-    <script src="app.js?v=4" defer></script>
+    <script src="money-repository.js?v=2" defer></script>
+    <script src="money-page.js?v=2" defer></script>
+    <script src="app.js?v=5" defer></script>
   </body>
 </html>

@@ -7,6 +7,11 @@
 
   function create() {
     const repository = window.ClearDayMoneyRepository.create();
+    const personal = repository?.mode === "personal";
+    const unlockForm = element("UnlockForm");
+    const accessKeyInput = element("AccessKey");
+    const lockButton = element("Lock");
+    const ledgerPanels = document.querySelectorAll("[data-money-content]");
     const form = element("Form");
     const fields = form.elements;
     const dialog = element("Dialog");
@@ -17,6 +22,21 @@
     const status = element("Status");
     const thisMonth = dates.toISO(new Date()).slice(0, 7);
     const state = { records: [], month: thisMonth, editing: null, draftID: "", loaded: false, busy: false };
+
+    if (personal) {
+      unlockForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (state.busy) return;
+        repository.setKey(accessKeyInput.value.trim());
+        accessKeyInput.value = "";
+        void load();
+      });
+      lockButton.addEventListener("click", () => {
+        lock();
+        accessKeyInput.focus();
+      });
+      render();
+    }
 
     element("Add").addEventListener("click", () => openForm());
     element("Cancel").addEventListener("click", () => dialog.close());
@@ -37,6 +57,12 @@
     element("Export").addEventListener("click", exportFile);
 
     function render() {
+      if (personal) {
+        unlockForm.hidden = state.loaded;
+        lockButton.hidden = !state.loaded;
+        element("Add").hidden = !state.loaded;
+        ledgerPanels.forEach((panel) => { panel.hidden = !state.loaded; });
+      }
       const months = new Set([thisMonth, ...state.records.map((record) => record.date.slice(0, 7))]);
       if (state.month) months.add(state.month);
       const options = [...months].sort().reverse().map((month) => new Option(model.formatMonth(month), month));
@@ -83,14 +109,43 @@
       element("Export").disabled = busy || !state.loaded || !state.records.length;
       element("Save").disabled = busy;
       element("Cancel").disabled = busy;
+      element("Unlock").disabled = busy;
+      lockButton.disabled = busy;
+    }
+
+    function lock(message = "Enter your private Money key to open the ledger.") {
+      repository.setKey("");
+      state.records = [];
+      state.loaded = false;
+      state.editing = null;
+      state.draftID = "";
+      state.month = thisMonth;
+      search.value = "";
+      typeFilter.value = "";
+      form.reset();
+      if (dialog.open) dialog.close();
+      status.textContent = message;
+      setBusy(state.busy);
+      render();
+    }
+
+    function lockIfKeyRejected(error) {
+      if (!personal || error.status !== 401) return false;
+      lock("The Money key was rejected. Check it and try again.");
+      accessKeyInput.focus();
+      return true;
     }
 
     async function load() {
       if (!repository) {
-        status.textContent = "Money requires Cognito sign-in on the deployed site.";
+        status.textContent = "Open ClearDay over HTTPS to use Money.";
         return;
       }
       if (state.busy) return;
+      if (personal && !repository.hasKey()) {
+        lock();
+        return;
+      }
       setBusy(true);
       status.textContent = "Loading transactions…";
       try {
@@ -100,9 +155,11 @@
           ? "Local preview · records are saved only in this browser."
           : "Transactions are synced to your account.";
       } catch (error) {
-        state.loaded = false;
-        state.records = [];
-        status.textContent = error.message;
+        if (!lockIfKeyRejected(error)) {
+          state.loaded = false;
+          state.records = [];
+          status.textContent = error.message;
+        }
       } finally {
         setBusy(false);
         render();
@@ -151,7 +208,7 @@
         dialog.close();
         status.textContent = state.editing ? "Transaction updated." : "Transaction saved.";
       } catch (error) {
-        errorMessage.textContent = error.message;
+        if (!lockIfKeyRejected(error)) errorMessage.textContent = error.message;
       } finally {
         setBusy(false);
         render();
@@ -175,7 +232,7 @@
         state.records = state.records.filter((item) => item.id !== record.id);
         status.textContent = "Transaction deleted.";
       } catch (error) {
-        status.textContent = error.message;
+        if (!lockIfKeyRejected(error)) status.textContent = error.message;
       } finally {
         setBusy(false);
         render();
@@ -220,7 +277,9 @@
         typeFilter.value = "";
         status.textContent = "Imported " + added + " · already present " + skipped + " · invalid " + invalid + ".";
       } catch (error) {
-        status.textContent = added ? "Imported " + added + " before stopping. Retry with the same file. " + error.message : error.message;
+        if (!lockIfKeyRejected(error)) {
+          status.textContent = added ? "Imported " + added + " before stopping. Retry with the same file. " + error.message : error.message;
+        }
       } finally {
         setBusy(false);
         render();

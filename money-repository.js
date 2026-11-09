@@ -7,30 +7,40 @@
   const api = window.ClearDayAPI;
 
   function create() {
-    if (auth.enabled) return cloudRepository();
+    if (auth.enabled) return cloudRepository("cloud");
     if (["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)) return previewRepository();
+    if (window.location.protocol === "https:") return cloudRepository("personal");
     return null;
   }
 
-  function cloudRepository() {
+  function cloudRepository(mode) {
+    // Keep the key in this tab's memory until the user locks Money or reloads.
+    let accessKey = "";
+    function request(path, options = {}) {
+      if (mode === "personal") options.headers = { Authorization: "Bearer " + accessKey };
+      return api.request(path, options);
+    }
+
     return {
-      mode: "cloud",
+      mode,
+      hasKey: () => accessKey !== "",
+      setKey: (key) => { accessKey = key; },
       async list() {
         try {
-          const records = await api.request(path, { cache: "no-store" });
+          const records = await request(path, { cache: "no-store" });
           if (!Array.isArray(records)) throw new Error("The Money API returned an invalid response.");
           return records;
         } catch (error) {
-          if (error.status === 404) throw new Error("The Money API is unavailable. Check the backend deployment and money table setting.");
+          if (error.status === 404) throw new Error("The Money API is unavailable. Check the backend deployment and Money settings.");
           throw error;
         }
       },
-      create: (record) => api.request(path, { method: "POST", body: JSON.stringify(record) }),
-      update: (record) => api.request(path + "/" + encodeURIComponent(record.id), {
+      create: (record) => request(path, { method: "POST", body: JSON.stringify(record) }),
+      update: (record) => request(path + "/" + encodeURIComponent(record.id), {
         method: "PUT",
         body: JSON.stringify(record),
       }),
-      remove: (id) => api.request(path + "/" + encodeURIComponent(id), { method: "DELETE" }),
+      remove: (id) => request(path + "/" + encodeURIComponent(id), { method: "DELETE" }),
     };
   }
 

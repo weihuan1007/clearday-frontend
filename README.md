@@ -29,9 +29,12 @@ Static frontend for the ClearDay reminder app.
 Run the Go backend and open `http://localhost:8080`. The backend serves these frontend files locally.
 
 With Cognito off on localhost, the Money tab saves preview data in that browser.
-On the deployed site it uses the signed-in transaction API.
+On the deployed HTTPS site, the Money tab uses the transaction API. A personal
+installation unlocks it with a private key configured on the backend.
 
-For production, the deployed `config.js` should contain:
+For a personal installation, the deployment workflow generates `config.js`
+with `apiBase: "/api"`. For a Cognito installation, it also includes the
+public browser sign-in settings:
 
 ```js
 window.CLEARDAY_CONFIG = {
