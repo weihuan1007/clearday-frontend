@@ -140,6 +140,7 @@
                 <select id="moneyMonth"></select>
               </div>
               <div class="money-actions">
+                <button id="moneyRefresh" class="subtle-button" type="button">Refresh</button>
                 <button id="moneyImport" class="subtle-button" type="button" disabled>Import JSON</button>
                 <input id="moneyFile" type="file" accept=".json,application/json" hidden />
                 <button id="moneyExport" class="subtle-button" type="button" disabled>Export JSON</button>
@@ -172,6 +173,15 @@
             <p id="moneyEmpty" class="muted"></p>
             <ul id="moneyList" class="money-list"></ul>
           </div>
+          <section id="moneyTelegram" class="money-panel" aria-labelledby="moneyTelegramTitle" hidden>
+            <h3 id="moneyTelegramTitle">Record from Telegram</h3>
+            <p class="muted">Send a message like <strong>RM20 Food dinner</strong> to add a transaction.</p>
+            <div class="money-actions">
+              <button id="moneyTelegramConnect" class="subtle-button" type="button">Connect Telegram</button>
+              <a id="moneyTelegramOpen" class="subtle-button" target="_blank" rel="noopener noreferrer" hidden>Open Telegram</a>
+            </div>
+            <p id="moneyTelegramStatus" class="muted" role="status"></p>
+          </section>
           <template id="moneyRow">
             <li class="money-record">
               <div><strong data-note></strong><span class="muted" data-details></span></div>
@@ -319,7 +329,8 @@
     <script src="calendar-view.js?v=4" defer></script>
     <script src="money-model.js" defer></script>
     <script src="money-repository.js?v=2" defer></script>
-    <script src="money-page.js?v=2" defer></script>
+    <script src="money-page.js?v=3" defer></script>
+    <script src="telegram-link.js" defer></script>
     <script src="app.js?v=5" defer></script>
   </body>
 </html>

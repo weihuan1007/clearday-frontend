@@ -55,6 +55,7 @@
     element("Import").addEventListener("click", () => element("File").click());
     element("File").addEventListener("change", importFile);
     element("Export").addEventListener("click", exportFile);
+    element("Refresh").addEventListener("click", load);
 
     function render() {
       if (personal) {
@@ -107,6 +108,7 @@
       element("Add").disabled = busy || !state.loaded;
       element("Import").disabled = busy || !state.loaded;
       element("Export").disabled = busy || !state.loaded || !state.records.length;
+      element("Refresh").disabled = busy;
       element("Save").disabled = busy;
       element("Cancel").disabled = busy;
       element("Unlock").disabled = busy;
