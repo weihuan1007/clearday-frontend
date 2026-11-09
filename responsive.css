@@ -1,22 +1,4 @@
 @media (max-width: 980px) {
-  .topbar {
-    grid-template-columns: 1fr auto;
-  }
-
-  .view-tabs {
-    grid-row: 2;
-    grid-column: 1 / -1;
-    justify-self: center;
-  }
-
-  .topbar-actions {
-    grid-column: 2;
-  }
-
-  .calendar-grid {
-    height: 620px;
-  }
-
   .event-date-group {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -25,78 +7,72 @@
   .event-date-heading {
     position: static;
   }
-}
-
-@media (max-width: 760px) {
-  .topbar {
-    gap: 12px;
-    min-height: 76px;
-    padding: 12px 16px;
-  }
-
-  .brand-block .eyebrow,
-  .sync-status {
-    display: none;
-  }
-
-  h1 {
-    font-size: 22px;
-  }
-
-  .topbar-add {
-    min-width: auto;
-  }
 
   .account-email {
     display: none;
   }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --sticky-clearance: 16px;
+  }
+
+  .topbar {
+    position: static;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .view-tabs {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .view-tab {
+    flex: 1;
+    padding-inline: 8px;
+  }
 
   .app-main {
-    width: calc(100% - 24px);
-    padding-top: 16px;
+    padding-top: 22px;
   }
 
   .calendar-heading {
     align-items: flex-start;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
 
-  .legend {
-    justify-content: flex-start;
+  .calendar-controls {
+    flex-wrap: wrap;
   }
 
   .calendar-grid {
-    height: 550px;
-    min-height: 550px;
+    grid-auto-rows: minmax(76px, 1fr);
   }
 
   .day-cell {
     padding: 5px;
   }
 
-  .free-label,
   .chip-time {
     display: none;
   }
 
   .calendar-chip {
     height: 18px;
-    padding: 2px 4px;
-    font-size: 9px;
+    padding-inline: 4px;
   }
 
   .day-toolbar {
     display: grid;
-    grid-template-columns: auto 1fr;
-  }
-
-  .day-heading {
-    grid-column: 2;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
   }
 
   .day-heading h2 {
-    font-size: 19px;
+    font-size: 1.25rem;
   }
 
   .day-actions {
@@ -105,8 +81,8 @@
   }
 
   .timeline-scroll {
-    height: calc(100vh - 260px);
-    min-height: 440px;
+    min-height: 380px;
+    height: calc(100dvh - 260px);
   }
 
   .all-day-band {
@@ -118,7 +94,7 @@
   }
 
   .form-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .date-field {
@@ -126,93 +102,134 @@
   }
 }
 
+@media (max-width: 650px) {
+  .login-layout {
+    max-width: 460px;
+    grid-template-columns: 1fr;
+  }
+
+  .login-intro,
+  .login-panel {
+    padding: 24px;
+  }
+
+  .login-intro {
+    min-height: 0;
+  }
+
+  .login-intro .brand-mark {
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .money-page {
+    gap: 14px;
+  }
+
+  .money-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .money-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .money-total-net {
+    grid-column: 1 / -1;
+  }
+
+  .money-total {
+    padding-block: 10px;
+  }
+
+  .money-telegram {
+    grid-template-columns: 1fr;
+  }
+
+  .money-record {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .money-record .money-actions {
+    grid-column: 1 / -1;
+  }
+
+  .money-filters {
+    grid-template-columns: minmax(0, 1fr) minmax(110px, 36%);
+    gap: 8px;
+  }
+}
+
 @media (max-width: 520px) {
-  .topbar {
-    grid-template-columns: 1fr auto;
-  }
-
-  .account-actions {
-    padding-left: 0;
-    border-left: 0;
-  }
-
-  .month-actions .text-button {
-    display: none;
-  }
-
-  .view-tab {
-    min-width: 98px;
-  }
-
-  .calendar-heading h2 {
-    font-size: 20px;
-  }
-
-  .legend {
-    gap: 6px 10px;
-  }
-
-  .legend span {
-    font-size: 0;
-  }
-
-  .dot {
-    width: 9px;
-    height: 9px;
+  .calendar-grid {
+    grid-auto-rows: minmax(55px, 1fr);
   }
 
   .weekdays span {
-    padding: 7px 2px;
-    font-size: 9px;
-  }
-
-  .calendar-grid {
-    height: 500px;
-    min-height: 500px;
+    padding: 8px 2px;
+    font-size: 0.65rem;
   }
 
   .day-number {
     width: 22px;
     height: 22px;
-    font-size: 11px;
+    font-size: 0.75rem;
   }
 
-  .calendar-chip {
-    border-left-width: 4px;
-    background: transparent;
+  .day-items {
+    display: flex;
+    min-height: 10px;
+    align-items: center;
   }
 
-  .chip-title {
+  .day-items .calendar-chip {
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .chip-title,
+  .more-chip {
     display: none;
   }
 
-  .more-chip {
-    font-size: 9px;
+  .day-count {
+    display: inline;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 750;
+    line-height: 1;
+  }
+
+  .legend {
+    gap: 6px 12px;
+    padding: 10px;
+    font-size: 0.72rem;
   }
 
   .day-actions {
     display: grid;
-    grid-template-columns: 38px 1fr 38px;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
   }
 
   .day-actions .primary-button {
     grid-column: 1 / -1;
   }
 
-  .timeline-scroll {
-    margin-right: -12px;
-    margin-left: -12px;
-    border-right: 0;
-    border-left: 0;
-  }
-
   .events-header {
-    align-items: stretch;
+    align-items: flex-start;
     flex-direction: column;
   }
 
-  .form-grid {
-    grid-template-columns: 1fr;
+  .form-grid,
+  #moneyForm .form-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .date-field,
@@ -222,7 +239,7 @@
 
   .app-dialog {
     width: calc(100% - 16px);
-    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
   }
 
   .dialog-card {
@@ -244,6 +261,31 @@
     left: 16px;
     max-width: none;
     text-align: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .calendar-board {
+    margin-inline: -6px;
+  }
+
+  .view-tab {
+    gap: 4px;
+    padding-inline: 5px;
+    font-size: 0.78rem;
+  }
+
+  .view-tab .icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .money-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .money-total {
+    padding-inline: 10px;
   }
 }
 

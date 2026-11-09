@@ -1,103 +1,199 @@
 .money-page {
   display: grid;
-  gap: 16px;
-  max-width: 1100px;
+  gap: 18px;
+  max-width: 1120px;
   margin-inline: auto;
 }
 
-.money-header,
 .money-panel {
+  min-width: 0;
+  padding: clamp(14px, 2.5vw, 24px);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: clamp(14px, 3vw, 24px);
+  border-radius: var(--radius-panel);
   background: var(--surface);
+  box-shadow: var(--shadow-panel);
 }
 
-.money-header,
+.money-section-heading,
 .money-toolbar,
 .money-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
-.money-header,
+.money-section-heading,
 .money-toolbar {
   justify-content: space-between;
 }
 
-.money-header h2,
-.money-panel h3,
-.money-status,
-.money-totals,
-.money-totals dd {
+.money-status {
   margin: 0;
-}
-
-.money-toolbar input,
-.money-toolbar select {
-  display: block;
 }
 
 .money-totals {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  margin: 14px 0 0;
 }
 
-.money-totals > div {
-  padding: 12px;
+.money-total {
+  min-width: 0;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
+  background: var(--surface-soft);
 }
 
-.money-totals dt {
+.money-total-net {
+  border-color: var(--brand-deep);
+  color: var(--surface);
+  background: var(--brand-deep);
+}
+
+.money-total dt {
   color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
-.money-totals dd {
-  font-size: clamp(1.15rem, 3vw, 1.5rem);
+.money-total-net dt {
+  color: var(--teal-soft);
+}
+
+.money-total dd {
+  margin: 4px 0 0;
+  font-size: clamp(1.15rem, 3vw, 1.75rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.money-total dd[data-type="income"],
+.money-record [data-amount][data-type="income"] {
+  color: #176b4a;
+}
+
+.money-total dd[data-type="expense"],
+.money-record [data-amount][data-type="expense"] {
+  color: var(--danger);
+}
+
+.money-telegram {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(120deg, var(--teal-soft), var(--surface) 80%);
+}
+
+.money-telegram-intro,
+.money-record-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.money-telegram-mark,
+.money-record-mark {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-control);
+  color: var(--teal-dark);
+  background: var(--surface-soft);
+  place-items: center;
+}
+
+.money-telegram-mark {
+  width: 42px;
+  height: 42px;
+  background: var(--surface);
+}
+
+.money-telegram code {
+  color: var(--teal-dark);
+  font-size: 0.82rem;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 
+#moneyTelegramStatus {
+  grid-column: 1 / -1;
+}
+
+#moneyTelegramStatus:empty {
+  display: none;
+}
+
+.money-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 200px);
+  gap: 12px;
+  margin: 16px 0;
+}
+
 .money-list {
-  list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .money-record {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   padding: 12px 0;
   border-top: 1px solid var(--line);
+}
+
+.money-record-copy {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.money-record span {
+.money-record [data-details] {
   display: block;
+  font-size: 0.8rem;
+}
+
+.money-record [data-amount] {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.money-record[data-type="expense"] .money-record-mark {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.money-record[data-type="transfer"] .money-record-mark {
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.money-source {
+  display: inline-block;
   margin-top: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--blue);
+  background: var(--blue-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
-.money-page [data-type="income"] {
-  color: #176b4a;
+.money-delete {
+  color: var(--danger);
 }
 
-.money-page [data-type="expense"] {
-  color: #a33435;
-}
-
-@media (max-width: 600px) {
-  .money-record {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .money-record .money-actions {
-    grid-column: 1 / -1;
-  }
+.money-history .empty-state {
+  min-height: 100px;
+  margin: 0;
 }

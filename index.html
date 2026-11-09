@@ -3,81 +3,106 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f7f8f6" />
+    <meta name="theme-color" content="#f3f6f4" />
     <meta name="referrer" content="no-referrer" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.amazoncognito.com; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://*.amazoncognito.com" />
     <title>ClearDay</title>
-    <link rel="stylesheet" href="styles.css?v=2" />
-    <link rel="stylesheet" href="calendar.css?v=2" />
-    <link rel="stylesheet" href="components.css?v=2" />
-    <link rel="stylesheet" href="responsive.css?v=2" />
-    <link rel="stylesheet" href="money.css" />
+    <link rel="stylesheet" href="styles.css?v=3" />
+    <link rel="stylesheet" href="calendar.css?v=3" />
+    <link rel="stylesheet" href="components.css?v=3" />
+    <link rel="stylesheet" href="money.css?v=2" />
+    <link rel="stylesheet" href="responsive.css?v=3" />
   </head>
   <body>
+    <svg class="icon-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <symbol id="icon-calendar" viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18m-13 5 2.5 2.5L16 13"/>
+      </symbol>
+      <symbol id="icon-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+      <symbol id="icon-wallet" viewBox="0 0 24 24">
+        <path d="M20 8V6a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h13a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V7m18 6h-5a2 2 0 0 0 0 4h5m-5-2h.01"/>
+      </symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="icon-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+      <symbol id="icon-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+      <symbol id="icon-message" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4 20-7ZM11 13 22 2"/></symbol>
+      <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5m11 0a8 8 0 0 0-14-5m-2 5a8 8 0 0 0 14 5"/></symbol>
+    </svg>
     <main id="loginView" class="login-view" hidden>
-      <section class="login-panel" aria-labelledby="loginTitle">
-        <p class="eyebrow">Personal reminders and money</p>
-        <h1 id="loginTitle">ClearDay</h1>
-        <p class="login-copy">Sign in to open your reminders and money records.</p>
-        <p id="loginError" class="form-error" aria-live="polite"></p>
-        <button id="signInButton" class="primary-button login-button" type="button">Sign in securely</button>
-      </section>
+      <div class="login-layout">
+        <div class="login-intro">
+          <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg></span>
+          <p class="eyebrow">Personal workspace</p>
+          <h1>ClearDay</h1>
+          <p>Plan your days, keep track of reminders, and record your spending.</p>
+        </div>
+        <section class="login-panel" aria-labelledby="loginTitle">
+          <p class="eyebrow">Your account</p>
+          <h2 id="loginTitle">Sign in to ClearDay</h2>
+          <p class="login-copy">Open your calendar, reminders, and Money ledger.</p>
+          <button id="signInButton" class="primary-button login-button" type="button">
+            Sign in securely <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg>
+          </button>
+          <p id="loginError" class="form-error" aria-live="polite"></p>
+        </section>
+      </div>
     </main>
 
     <div id="appShell" class="app-shell" hidden>
+      <button id="skipToContent" class="skip-link primary-button" type="button">Skip to content</button>
       <header class="topbar" aria-label="Application header">
         <div class="brand-block">
-          <p class="eyebrow">Reminders and money</p>
-          <h1>ClearDay</h1>
-          <p id="syncStatus" class="sync-status">Connecting</p>
+          <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg></span>
+          <div>
+            <h1>ClearDay</h1>
+            <p id="syncStatus" class="sync-status">Connecting</p>
+          </div>
         </div>
 
         <nav class="view-tabs" aria-label="ClearDay views">
-          <a class="view-tab" href="#calendar" data-page-link="calendar" aria-current="page">Calendar</a>
-          <a class="view-tab" href="#events" data-page-link="events">Reminders</a>
-          <a class="view-tab" href="#money" data-page-link="money">Money</a>
+          <a class="view-tab" href="#calendar" data-page-link="calendar" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg> Calendar</a>
+          <a class="view-tab" href="#events" data-page-link="events"><svg class="icon" aria-hidden="true"><use href="#icon-list"/></svg> Reminders</a>
+          <a class="view-tab" href="#money" data-page-link="money"><svg class="icon" aria-hidden="true"><use href="#icon-wallet"/></svg> Money</a>
         </nav>
 
-        <div class="topbar-actions">
-          <div class="month-actions" aria-label="Calendar navigation" data-month-actions>
-            <button class="icon-button" type="button" id="prevMonth" aria-label="Previous month" title="Previous month">&lsaquo;</button>
-            <button class="text-button" type="button" id="todayButton">Today</button>
-            <button class="icon-button" type="button" id="nextMonth" aria-label="Next month" title="Next month">&rsaquo;</button>
-          </div>
-          <button class="primary-button topbar-add" id="addReminder" type="button">Add reminder</button>
-          <div class="account-actions">
-            <span id="accountEmail" class="account-email"></span>
-            <button class="subtle-button" id="signOutButton" type="button">Sign out</button>
-          </div>
+        <div class="account-actions">
+          <span id="accountEmail" class="account-email"></span>
+          <button class="subtle-button" id="signOutButton" type="button">Sign out</button>
         </div>
       </header>
 
-      <main class="app-main">
+      <main class="app-main" id="mainContent" tabindex="-1">
         <section id="calendarPage" class="page-view is-active" data-page="calendar" aria-label="Calendar page">
           <section id="monthView" class="calendar-surface" aria-labelledby="monthTitle">
-            <div class="calendar-heading">
+            <div class="page-heading calendar-heading">
               <div>
+                <p class="eyebrow">Calendar</p>
                 <h2 id="monthTitle">Month</h2>
-                <p id="monthSummary" class="muted">Loading calendar</p>
+                <p id="monthSummary" class="muted" role="status">Loading calendar</p>
               </div>
+              <div class="calendar-controls">
+                <div class="month-actions" role="group" aria-label="Calendar navigation">
+                  <button class="icon-button" type="button" id="prevMonth" aria-label="Previous month" title="Previous month"><svg class="icon" aria-hidden="true"><use href="#icon-left"/></svg></button>
+                  <button class="text-button" type="button" id="todayButton">Today</button>
+                  <button class="icon-button" type="button" id="nextMonth" aria-label="Next month" title="Next month"><svg class="icon" aria-hidden="true"><use href="#icon-right"/></svg></button>
+                </div>
+                <button class="primary-button" id="addReminder" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg> Add reminder</button>
+              </div>
+            </div>
+            <div class="calendar-board">
+              <div class="weekdays" aria-hidden="true">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+              <div class="calendar-grid" id="calendarGrid" role="grid" aria-label="Monthly reminder calendar" aria-describedby="calendarHint"></div>
               <div class="legend" aria-label="Reminder categories">
-                <span><i class="dot subscription"></i>Subscription</span>
-                <span><i class="dot event"></i>Event</span>
-                <span><i class="dot payment"></i>Payment</span>
-                <span><i class="dot personal"></i>Personal</span>
+                <span><i class="dot subscription" aria-hidden="true"></i>Subscription</span>
+                <span><i class="dot event" aria-hidden="true"></i>Event</span>
+                <span><i class="dot payment" aria-hidden="true"></i>Payment</span>
+                <span><i class="dot personal" aria-hidden="true"></i>Personal</span>
               </div>
             </div>
-
-            <div class="weekdays" aria-hidden="true">
-              <span>Sun</span>
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-            </div>
-            <div class="calendar-grid" id="calendarGrid" role="grid" aria-label="Monthly reminder calendar"></div>
+            <p id="calendarHint" class="sr-only">Use the arrow keys to move between dates. Press Enter to open a day.</p>
           </section>
 
           <section id="dayView" class="calendar-surface day-view" aria-labelledby="selectedTitle" hidden>
@@ -85,14 +110,14 @@
               <button class="back-button" id="backToMonth" type="button"><span aria-hidden="true">&larr;</span> Month</button>
               <div class="day-heading">
                 <p class="eyebrow">Day schedule</p>
-                <h2 id="selectedTitle">Selected day</h2>
+                <h2 id="selectedTitle" tabindex="-1">Selected day</h2>
                 <p id="selectedCount" class="muted">0 reminders</p>
               </div>
               <div class="day-actions" aria-label="Day navigation">
-                <button class="icon-button" id="prevDay" type="button" aria-label="Previous day" title="Previous day">&lsaquo;</button>
+                <button class="icon-button" id="prevDay" type="button" aria-label="Previous day" title="Previous day"><svg class="icon" aria-hidden="true"><use href="#icon-left"/></svg></button>
                 <button class="text-button" id="dayTodayButton" type="button">Today</button>
-                <button class="icon-button" id="nextDay" type="button" aria-label="Next day" title="Next day">&rsaquo;</button>
-                <button class="primary-button" id="addDayReminder" type="button">Add reminder</button>
+                <button class="icon-button" id="nextDay" type="button" aria-label="Next day" title="Next day"><svg class="icon" aria-hidden="true"><use href="#icon-right"/></svg></button>
+                <button class="primary-button" id="addDayReminder" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg> Add reminder</button>
               </div>
             </div>
             <div id="selectedList" class="day-schedule" aria-live="polite"></div>
@@ -100,30 +125,29 @@
         </section>
 
         <section id="eventsPage" class="page-view events-page" data-page="events" aria-labelledby="eventsTitle" hidden>
-          <div class="events-header">
+          <div class="page-heading events-header">
             <div>
               <p class="eyebrow">Saved reminders</p>
               <h2 id="eventsTitle">Reminders</h2>
-              <p id="eventsSummary" class="muted">Loading reminders</p>
+              <p id="eventsSummary" class="muted" role="status">Loading reminders</p>
             </div>
-            <button class="primary-button" id="addFromEvents" type="button">Add reminder</button>
+            <button class="primary-button" id="addFromEvents" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg> Add reminder</button>
           </div>
           <div id="eventsByDate" class="events-by-date" aria-live="polite"></div>
         </section>
 
         <section id="moneyPage" class="page-view money-page" data-page="money" aria-labelledby="moneyTitle" hidden>
-          <header class="money-header">
+          <header class="page-heading money-header">
             <div>
               <p class="eyebrow">Personal ledger · MYR</p>
               <h2 id="moneyTitle">Money</h2>
-              <p class="muted">Track income, expenses, and transfers.</p>
+              <p id="moneyStatus" class="muted money-status" role="status">Track income, expenses, and transfers.</p>
             </div>
             <div class="money-actions">
               <button id="moneyLock" class="subtle-button" type="button" hidden>Lock Money</button>
-              <button id="moneyAdd" class="primary-button" type="button" disabled>Add transaction</button>
+              <button id="moneyAdd" class="primary-button" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg> Add transaction</button>
             </div>
           </header>
-          <p id="moneyStatus" class="muted money-status" role="status"></p>
 
           <form id="moneyUnlockForm" class="money-panel money-toolbar" hidden>
             <div>
@@ -133,32 +157,53 @@
             <button id="moneyUnlock" class="primary-button" type="submit">Unlock Money</button>
           </form>
 
-          <div class="money-panel" data-money-content>
-            <div class="money-toolbar">
+          <section class="money-panel money-overview" data-money-content aria-labelledby="moneyOverviewTitle">
+            <div class="money-section-heading">
+              <h3 id="moneyOverviewTitle">Overview</h3>
               <div>
                 <label for="moneyMonth">Period</label>
                 <select id="moneyMonth"></select>
               </div>
+            </div>
+            <dl class="money-totals">
+              <div class="money-total money-total-net"><dt>Net</dt><dd id="moneyNet">—</dd></div>
+              <div class="money-total money-total-income"><dt>Income</dt><dd id="moneyIncome" data-type="income">—</dd></div>
+              <div class="money-total money-total-expense"><dt>Expenses</dt><dd id="moneyExpense" data-type="expense">—</dd></div>
+            </dl>
+          </section>
+
+          <section id="moneyTelegram" class="money-panel money-telegram" aria-labelledby="moneyTelegramTitle" hidden>
+            <div class="money-telegram-intro">
+              <span class="money-telegram-mark"><svg class="icon" aria-hidden="true"><use href="#icon-message"/></svg></span>
+              <div>
+                <h3 id="moneyTelegramTitle">Record from Telegram</h3>
+                <p class="muted">Send <code>RM20 Food dinner</code> to your bot to add an expense.</p>
+              </div>
+            </div>
+            <div class="money-actions">
+              <button id="moneyTelegramConnect" class="subtle-button" type="button">Connect Telegram</button>
+              <a id="moneyTelegramOpen" class="primary-button" target="_blank" rel="noopener noreferrer" hidden>Open Telegram</a>
+            </div>
+            <p id="moneyTelegramStatus" class="muted" role="status"></p>
+          </section>
+
+          <section class="money-panel money-history" data-money-content aria-labelledby="moneyHistoryTitle">
+            <div class="money-section-heading">
+              <div>
+                <h3 id="moneyHistoryTitle">Transactions</h3>
+                <p id="moneyCount" class="muted" role="status"></p>
+              </div>
               <div class="money-actions">
-                <button id="moneyRefresh" class="subtle-button" type="button">Refresh</button>
+                <button id="moneyRefresh" class="subtle-button" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-refresh"/></svg> Refresh</button>
                 <button id="moneyImport" class="subtle-button" type="button" disabled>Import JSON</button>
                 <input id="moneyFile" type="file" accept=".json,application/json" hidden />
                 <button id="moneyExport" class="subtle-button" type="button" disabled>Export JSON</button>
               </div>
             </div>
-            <dl class="money-totals">
-              <div><dt>Income</dt><dd id="moneyIncome" data-type="income">—</dd></div>
-              <div><dt>Expenses</dt><dd id="moneyExpense" data-type="expense">—</dd></div>
-              <div><dt>Net</dt><dd id="moneyNet">—</dd></div>
-            </dl>
-          </div>
-
-          <div class="money-panel" data-money-content>
-            <h3>Transactions</h3>
-            <div class="money-toolbar">
+            <div class="money-filters">
               <div>
                 <label for="moneySearch">Search</label>
-                <input id="moneySearch" type="search" placeholder="Note, category, or account" />
+                <input id="moneySearch" type="search" placeholder="Note, category, account" />
               </div>
               <div>
                 <label for="moneyTypeFilter">Type</label>
@@ -170,25 +215,23 @@
                 </select>
               </div>
             </div>
-            <p id="moneyEmpty" class="muted"></p>
+            <p id="moneyEmpty" class="empty-state" hidden></p>
             <ul id="moneyList" class="money-list"></ul>
-          </div>
-          <section id="moneyTelegram" class="money-panel" aria-labelledby="moneyTelegramTitle" hidden>
-            <h3 id="moneyTelegramTitle">Record from Telegram</h3>
-            <p class="muted">Send a message like <strong>RM20 Food dinner</strong> to add a transaction.</p>
-            <div class="money-actions">
-              <button id="moneyTelegramConnect" class="subtle-button" type="button">Connect Telegram</button>
-              <a id="moneyTelegramOpen" class="subtle-button" target="_blank" rel="noopener noreferrer" hidden>Open Telegram</a>
-            </div>
-            <p id="moneyTelegramStatus" class="muted" role="status"></p>
           </section>
           <template id="moneyRow">
             <li class="money-record">
-              <div><strong data-note></strong><span class="muted" data-details></span></div>
+              <div class="money-record-main">
+                <span class="money-record-mark" aria-hidden="true" data-record-mark></span>
+                <div class="money-record-copy">
+                  <strong data-note></strong>
+                  <span class="muted" data-details></span>
+                  <span class="money-source" data-source hidden>Telegram</span>
+                </div>
+              </div>
               <strong data-amount></strong>
               <div class="money-actions">
                 <button class="subtle-button" type="button" data-money-action="edit">Edit</button>
-                <button class="subtle-button" type="button" data-money-action="delete">Delete</button>
+                <button class="subtle-button money-delete" type="button" data-money-action="delete">Delete</button>
               </div>
             </li>
           </template>
@@ -326,11 +369,11 @@
     <script src="reminder-model.js?v=3" defer></script>
     <script src="reminder-repository.js?v=3" defer></script>
     <script src="reminder-form.js?v=3" defer></script>
-    <script src="calendar-view.js?v=4" defer></script>
+    <script src="calendar-view.js?v=5" defer></script>
     <script src="money-model.js" defer></script>
     <script src="money-repository.js?v=2" defer></script>
-    <script src="money-page.js?v=3" defer></script>
+    <script src="money-page.js?v=4" defer></script>
     <script src="telegram-link.js" defer></script>
-    <script src="app.js?v=5" defer></script>
+    <script src="app.js?v=6" defer></script>
   </body>
 </html>

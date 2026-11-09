@@ -14,8 +14,10 @@
     syncStatus: document.querySelector("#syncStatus"),
     monthView: document.querySelector("#monthView"),
     dayView: document.querySelector("#dayView"),
-    monthActions: document.querySelector("[data-month-actions]"),
     calendarGrid: document.querySelector("#calendarGrid"),
+    selectedTitle: document.querySelector("#selectedTitle"),
+    skipToContent: document.querySelector("#skipToContent"),
+    mainContent: document.querySelector("#mainContent"),
     selectedList: document.querySelector("#selectedList"),
     eventsByDate: document.querySelector("#eventsByDate"),
     prevMonth: document.querySelector("#prevMonth"),
@@ -84,6 +86,8 @@
     elements.nextMonth.addEventListener("click", () => changeMonth(1));
     elements.today.addEventListener("click", showCurrentMonth);
     elements.calendarGrid.addEventListener("click", handleCalendarClick);
+    elements.calendarGrid.addEventListener("keydown", handleCalendarKeys);
+    elements.skipToContent.addEventListener("click", () => elements.mainContent.focus());
 
     elements.backToMonth.addEventListener("click", showMonth);
     elements.prevDay.addEventListener("click", () => changeDay(-1));
@@ -138,6 +142,19 @@
     const cell = event.target.closest("[data-date]");
     if (!cell) return;
     openDay(cell.dataset.date);
+    elements.selectedTitle.focus();
+  }
+
+  function handleCalendarKeys(event) {
+    const offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+    if (!offset || event.altKey || event.ctrlKey || event.metaKey || !event.target.matches(".day-cell")) return;
+    const cells = Array.from(elements.calendarGrid.querySelectorAll(".day-cell"));
+    const next = cells[cells.indexOf(event.target) + offset];
+    event.preventDefault();
+    if (!next) return;
+    event.target.tabIndex = -1;
+    next.tabIndex = 0;
+    next.focus();
   }
 
   function openDay(iso) {
@@ -292,8 +309,6 @@
     const dayMode = state.activePage === "calendar" && state.calendarMode === "day";
     elements.monthView.hidden = dayMode;
     elements.dayView.hidden = !dayMode;
-    elements.monthActions.hidden = state.activePage !== "calendar" || dayMode;
-    elements.addReminder.hidden = state.activePage === "money";
     elements.syncStatus.hidden = state.activePage === "money";
 
     view.renderMonth(state);

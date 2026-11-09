@@ -1,7 +1,6 @@
 (function () {
   "use strict";
 
-  const DAYS_IN_VIEW = 42;
   const HOUR_HEIGHT = 64;
   const MINUTES_IN_DAY = 1440;
   const categoryLabels = {
@@ -20,6 +19,7 @@
     const monthStart = dates.startOfMonth(state.viewDate);
     const monthEnd = dates.endOfMonth(state.viewDate);
     const gridStart = dates.addDays(monthStart, -monthStart.getDay());
+    const gridEnd = dates.addDays(monthEnd, 6 - monthEnd.getDay());
     const inMonth = state.reminders.filter((reminder) => {
       const date = dates.parseISO(reminder.date);
       return date >= monthStart && date <= monthEnd;
@@ -31,27 +31,43 @@
     summary.textContent = state.isLoading
       ? "Loading reminders"
       : `${scheduledDays} scheduled ${dates.pluralize(scheduledDays, "day")}, ${freeDays} free ${dates.pluralize(freeDays, "day")}`;
-    grid.replaceChildren();
+    // Keep the keyboard position when a refresh replaces the calendar cells.
+    const activeDate = grid.contains(document.activeElement) ? document.activeElement.dataset.date : "";
+    const focusedDate = activeDate >= dates.toISO(gridStart) && activeDate <= dates.toISO(gridEnd) ? activeDate : "";
+    const firstDate = dates.toISO(monthStart);
+    const selectedInMonth = state.selectedDate.slice(0, 7) === firstDate.slice(0, 7);
+    const tabDate = focusedDate || (selectedInMonth ? state.selectedDate : firstDate);
+    const weeks = document.createDocumentFragment();
 
-    for (let index = 0; index < DAYS_IN_VIEW; index += 1) {
-      const date = dates.addDays(gridStart, index);
-      grid.append(createDayCell(state, date));
+    for (let week = gridStart; week <= gridEnd; week = dates.addDays(week, 7)) {
+      const row = document.createElement("div");
+      row.className = "calendar-week";
+      row.setAttribute("role", "row");
+      for (let weekday = 0; weekday < 7; weekday += 1) {
+        row.append(createDayCell(state, dates.addDays(week, weekday), tabDate));
+      }
+      weeks.append(row);
     }
+    grid.replaceChildren(weeks);
+    if (focusedDate) grid.querySelector('[data-date="' + focusedDate + '"]')?.focus({ preventScroll: true });
   }
 
-  function createDayCell(state, date) {
+  function createDayCell(state, date, tabDate) {
     const iso = dates.toISO(date);
     const items = model.forDate(state.reminders, iso);
     const isCurrentMonth = date.getMonth() === state.viewDate.getMonth();
     const isToday = iso === dates.toISO(new Date());
     const isSelected = iso === state.selectedDate;
+    const gridcell = document.createElement("div");
     const cell = document.createElement("button");
 
+    gridcell.setAttribute("role", "gridcell");
+    gridcell.setAttribute("aria-selected", String(isSelected));
     cell.type = "button";
     cell.className = classNames("day-cell", !isCurrentMonth && "is-muted", isToday && "is-today", isSelected && "is-selected");
     cell.dataset.date = iso;
-    cell.setAttribute("role", "gridcell");
-    cell.setAttribute("aria-selected", String(isSelected));
+    cell.tabIndex = iso === tabDate ? 0 : -1;
+    if (isToday) cell.setAttribute("aria-current", "date");
     cell.setAttribute("aria-label", `${dates.formatLongDate(iso)}: ${items.length || "no"} ${dates.pluralize(items.length, "reminder")}`);
 
     const topLine = document.createElement("span");
@@ -61,26 +77,27 @@
     number.textContent = String(date.getDate());
     topLine.append(number);
 
-    if (!items.length && isCurrentMonth && !state.isLoading) {
-      const free = document.createElement("span");
-      free.className = "free-label";
-      free.textContent = "Free";
-      topLine.append(free);
-    }
-
     const itemWrap = document.createElement("span");
     itemWrap.className = "day-items";
-    items.slice(0, 3).forEach((reminder) => itemWrap.append(createMonthChip(reminder)));
+    items.slice(0, 2).forEach((reminder) => itemWrap.append(createMonthChip(reminder)));
 
-    if (items.length > 3) {
+    if (items.length > 2) {
       const more = document.createElement("span");
       more.className = "more-chip";
-      more.textContent = `+${items.length - 3} more`;
+      more.textContent = `+${items.length - 2} more`;
       itemWrap.append(more);
+    }
+    if (items.length) {
+      const count = document.createElement("span");
+      count.className = "day-count";
+      count.setAttribute("aria-hidden", "true");
+      count.textContent = String(items.length);
+      itemWrap.append(count);
     }
 
     cell.append(topLine, itemWrap);
-    return cell;
+    gridcell.append(cell);
+    return gridcell;
   }
 
   function createMonthChip(reminder) {
@@ -324,7 +341,7 @@
 
   function renderSyncStatus(mode, error) {
     const status = document.querySelector("#syncStatus");
-    const labels = { loading: "Connecting", api: "AWS API", local: "Local browser", fallback: "Local fallback" };
+    const labels = { loading: "Connecting", api: "Synced", local: "On this device", fallback: "Sync unavailable" };
     status.textContent = labels[mode] || labels.local;
     status.dataset.mode = mode;
     status.title = error || "";

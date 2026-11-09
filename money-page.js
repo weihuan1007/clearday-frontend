@@ -83,7 +83,12 @@
       );
       visible.sort((left, right) => right.date.localeCompare(left.date) || left.id.localeCompare(right.id));
       list.replaceChildren(...visible.map(createRow));
-      element("Empty").textContent = state.loaded && !visible.length ? "No transactions match this view." : "";
+      element("Count").textContent = state.loaded
+        ? `${visible.length} ${dates.pluralize(visible.length, "transaction")}`
+        : "";
+      const empty = element("Empty");
+      empty.hidden = !state.loaded || visible.length > 0;
+      empty.textContent = state.records.length ? "No transactions match these filters." : "Add a transaction to start your ledger.";
       element("Export").disabled = state.busy || !state.loaded || !state.records.length;
     }
 
@@ -91,6 +96,7 @@
       const row = element("Row").content.firstElementChild.cloneNode(true);
       const title = record.note || record.category;
       row.dataset.id = record.id;
+      row.dataset.type = record.type;
       row.querySelector("[data-note]").textContent = title;
       row.querySelector("[data-details]").textContent =
         [record.date, model.labels[record.type], record.category, record.account].join(" · ");
@@ -98,6 +104,8 @@
       amount.dataset.type = record.type;
       const sign = { income: "+", expense: "−", transfer: "" }[record.type];
       amount.textContent = sign + model.formatAmount(record.amountSen);
+      row.querySelector("[data-record-mark]").textContent = sign || "↔";
+      row.querySelector("[data-source]").hidden = record.source !== "telegram";
       row.querySelector('[data-money-action="edit"]').setAttribute("aria-label", "Edit " + title);
       row.querySelector('[data-money-action="delete"]').setAttribute("aria-label", "Delete " + title);
       return row;
