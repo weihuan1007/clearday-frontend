@@ -63,6 +63,7 @@
     bindEvents();
     render();
     loadActivePage();
+    void window.ClearDayTelegramLink.load();
   }
 
   function loadActivePage() {
