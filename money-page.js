@@ -3,6 +3,7 @@
 
   const dates = window.ClearDayDates;
   const model = window.ClearDayMoneyModel;
+  const analysis = window.ClearDayMoneyAnalysis;
   const element = (name) => document.getElementById("money" + name);
 
   function create() {
@@ -20,9 +21,14 @@
     const search = element("Search");
     const typeFilter = element("TypeFilter");
     const status = element("Status");
-    const thisMonth = dates.toISO(new Date()).slice(0, 7);
-    const state = { records: [], month: thisMonth, editing: null, draftID: "", loaded: false, busy: false, refreshing: false, version: 0 };
+    const today = analysis.today();
+    const thisMonth = today.slice(0, 7);
+    const state = {
+      records: [], kind: "month", anchor: today, category: "", editing: null,
+      draftID: "", loaded: false, busy: false, refreshing: false, version: 0,
+    };
     const liveSync = window.ClearDayMoneyLiveSync.create(refreshInBackground);
+    const charts = window.ClearDayMoneyCharts.create(selectCategory);
 
     if (personal) {
       unlockForm.addEventListener("submit", (event) => {
@@ -47,11 +53,40 @@
     form.addEventListener("submit", save);
     fields.type.addEventListener("change", () => fillSelect(fields.category, model.categories[fields.type.value]));
     monthSelect.addEventListener("change", () => {
-      state.month = monthSelect.value;
+      state.kind = monthSelect.value ? "month" : "all";
+      if (monthSelect.value) state.anchor = monthSelect.value + "-01";
+      render();
+    });
+    document.querySelector(".money-period-tabs").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-money-period]");
+      if (!button) return;
+      state.kind = button.dataset.moneyPeriod;
+      render();
+    });
+    element("WeekDate").addEventListener("change", (event) => {
+      if (!event.target.value || !event.target.validity.valid) return;
+      state.anchor = event.target.value;
+      render();
+    });
+    element("Year").addEventListener("change", (event) => {
+      state.anchor = event.target.value + "-01-01";
+      render();
+    });
+    element("PreviousPeriod").addEventListener("click", () => changePeriod(-1));
+    element("NextPeriod").addEventListener("click", () => changePeriod(1));
+    element("CurrentPeriod").addEventListener("click", () => {
+      state.anchor = analysis.today();
       render();
     });
     search.addEventListener("input", render);
-    typeFilter.addEventListener("change", render);
+    typeFilter.addEventListener("change", () => {
+      if (typeFilter.value !== "expense") state.category = "";
+      render();
+    });
+    element("ClearCategory").addEventListener("click", () => {
+      state.category = "";
+      render();
+    });
     list.addEventListener("click", handleRowAction);
     element("Import").addEventListener("click", () => element("File").click());
     element("File").addEventListener("change", importFile);
@@ -65,13 +100,31 @@
         element("Add").hidden = !state.loaded;
         ledgerPanels.forEach((panel) => { panel.hidden = !state.loaded; });
       }
-      const months = new Set([thisMonth, ...state.records.map((record) => record.date.slice(0, 7))]);
-      if (state.month) months.add(state.month);
+      const selectedMonth = state.anchor.slice(0, 7);
+      const months = new Set([thisMonth, selectedMonth, ...state.records.map((record) => record.date.slice(0, 7))]);
       const options = [...months].sort().reverse().map((month) => new Option(model.formatMonth(month), month));
       monthSelect.replaceChildren(...options, new Option("All months", ""));
-      monthSelect.value = state.month;
+      monthSelect.value = state.kind === "all" ? "" : selectedMonth;
+      const years = new Set([today.slice(0, 4), state.anchor.slice(0, 4), ...state.records.map((record) => record.date.slice(0, 4))]);
+      element("Year").replaceChildren(...[...years].sort().reverse().map((year) => new Option(year, year)));
+      element("Year").value = state.anchor.slice(0, 4);
+      element("WeekDate").value = state.anchor;
+      element("MonthControl").hidden = state.kind !== "month";
+      element("WeekControl").hidden = state.kind !== "week";
+      element("YearControl").hidden = state.kind !== "year";
+      document.querySelector(".money-period-controls").hidden = state.kind === "all";
+      document.querySelectorAll("[data-money-period]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.moneyPeriod === state.kind));
+      });
+      element("PreviousPeriod").setAttribute("aria-label", "Previous " + state.kind);
+      element("NextPeriod").setAttribute("aria-label", "Next " + state.kind);
+      element("CurrentPeriod").textContent = "This " + state.kind;
+      element("PreviousPeriod").disabled = state.anchor === analysis.shift(state.kind, state.anchor, -1);
+      element("NextPeriod").disabled = state.anchor === analysis.shift(state.kind, state.anchor, 1);
 
-      const period = state.records.filter((record) => !state.month || record.date.startsWith(state.month));
+      const range = analysis.range(state.kind, state.anchor);
+      element("PeriodLabel").textContent = range.label;
+      const period = state.records.filter((record) => analysis.inRange(record, range));
       const totals = model.totals(period);
       for (const [id, sen] of Object.entries({ Income: totals.income, Expense: totals.expense, Net: totals.net })) {
         element(id).textContent = state.loaded ? model.formatAmount(sen) : "—";
@@ -80,6 +133,7 @@
       const query = search.value.trim().toLowerCase();
       const visible = period.filter((record) =>
         (!typeFilter.value || record.type === typeFilter.value) &&
+        (!state.category || (record.type === "expense" && record.category === state.category)) &&
         [record.note, record.category, record.account].some((text) => text.toLowerCase().includes(query))
       );
       visible.sort((left, right) => right.date.localeCompare(left.date) || left.id.localeCompare(right.id));
@@ -91,6 +145,23 @@
       empty.hidden = !state.loaded || visible.length > 0;
       empty.textContent = state.records.length ? "No transactions match these filters." : "Add a transaction to start your ledger.";
       element("Export").disabled = state.busy || !state.loaded || !state.records.length;
+      element("CategoryFilter").hidden = !state.category;
+      element("CategoryFilterLabel").textContent = "Expenses in " + state.category;
+      charts.render(state.records, range, state.loaded, state.category);
+    }
+
+    function changePeriod(amount) {
+      state.anchor = analysis.shift(state.kind, state.anchor, amount);
+      render();
+    }
+
+    function selectCategory(category) {
+      state.category = state.category === category ? "" : category;
+      typeFilter.value = "expense";
+      search.value = "";
+      render();
+      element("HistoryTitle").focus({ preventScroll: true });
+      element("HistoryTitle").scrollIntoView({ block: "start" });
     }
 
     function createRow(record) {
@@ -133,7 +204,9 @@
       state.loaded = false;
       state.editing = null;
       state.draftID = "";
-      state.month = thisMonth;
+      state.kind = "month";
+      state.anchor = analysis.today();
+      state.category = "";
       search.value = "";
       typeFilter.value = "";
       form.reset();
@@ -224,7 +297,7 @@
       state.draftID = record?.id || crypto.randomUUID();
       fields.type.value = record?.type || "expense";
       fields.amount.value = record ? (record.amountSen / 100).toFixed(2) : "";
-      fields.date.value = record?.date || dates.toISO(new Date());
+      fields.date.value = record?.date || analysis.today();
       fields.note.value = record?.note || "";
       fillSelect(fields.category, model.categories[fields.type.value], record?.category);
       fillSelect(fields.account, model.accounts, record?.account);
@@ -254,7 +327,8 @@
         const saved = state.editing ? await repository.update(record) : (await repository.create(record)).transaction;
         state.records = state.records.filter((item) => item.id !== saved.id);
         state.records.push(saved);
-        if (state.month) state.month = saved.date.slice(0, 7);
+        if (state.kind !== "all") state.anchor = saved.date;
+        state.category = "";
         search.value = "";
         typeFilter.value = "";
         dialog.close();
@@ -324,7 +398,8 @@
             skipped += 1;
           }
         }
-        state.month = "";
+        state.kind = "all";
+        state.category = "";
         search.value = "";
         typeFilter.value = "";
         status.textContent = "Imported " + added + " · already present " + skipped + " · invalid " + invalid + ".";

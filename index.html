@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="styles.css?v=3" />
     <link rel="stylesheet" href="calendar.css?v=3" />
     <link rel="stylesheet" href="components.css?v=3" />
-    <link rel="stylesheet" href="money.css?v=2" />
+    <link rel="stylesheet" href="money.css?v=3" />
     <link rel="stylesheet" href="responsive.css?v=3" />
   </head>
   <body>
@@ -158,18 +158,66 @@
           </form>
 
           <section class="money-panel money-overview" data-money-content aria-labelledby="moneyOverviewTitle">
-            <div class="money-section-heading">
+            <div class="money-section-heading money-period-heading">
               <h3 id="moneyOverviewTitle">Overview</h3>
-              <div>
-                <label for="moneyMonth">Period</label>
-                <select id="moneyMonth"></select>
+              <div class="money-period-tabs" role="group" aria-label="Choose a Money period">
+                <button type="button" data-money-period="week" aria-pressed="false">Week</button>
+                <button type="button" data-money-period="month" aria-pressed="true">Month</button>
+                <button type="button" data-money-period="year" aria-pressed="false">Year</button>
+                <button type="button" data-money-period="all" aria-pressed="false">All time</button>
               </div>
             </div>
+            <div class="money-period-controls">
+              <div id="moneyMonthControl">
+                <label for="moneyMonth">Month</label>
+                <select id="moneyMonth"></select>
+              </div>
+              <div id="moneyWeekControl" hidden>
+                <label for="moneyWeekDate">Date in week · Monday–Sunday</label>
+                <input id="moneyWeekDate" type="date" min="0001-01-01" max="9999-12-31" />
+              </div>
+              <div id="moneyYearControl" hidden>
+                <label for="moneyYear">Year</label>
+                <select id="moneyYear"></select>
+              </div>
+              <div class="money-actions" id="moneyPeriodNavigation">
+                <button id="moneyPreviousPeriod" class="icon-button" type="button" aria-label="Previous month"><svg class="icon" aria-hidden="true"><use href="#icon-left"/></svg></button>
+                <button id="moneyCurrentPeriod" class="subtle-button" type="button">This month</button>
+                <button id="moneyNextPeriod" class="icon-button" type="button" aria-label="Next month"><svg class="icon" aria-hidden="true"><use href="#icon-right"/></svg></button>
+              </div>
+            </div>
+            <p id="moneyPeriodLabel" class="muted money-period-label" role="status"></p>
             <dl class="money-totals">
               <div class="money-total money-total-net"><dt>Net</dt><dd id="moneyNet">—</dd></div>
               <div class="money-total money-total-income"><dt>Income</dt><dd id="moneyIncome" data-type="income">—</dd></div>
               <div class="money-total money-total-expense"><dt>Expenses</dt><dd id="moneyExpense" data-type="expense">—</dd></div>
             </dl>
+          </section>
+
+          <section class="money-panel money-analysis" data-money-content aria-labelledby="moneyAnalysisTitle">
+            <div class="money-section-heading">
+              <div>
+                <p class="eyebrow">Understand your spending</p>
+                <h3 id="moneyAnalysisTitle">Spending insights</h3>
+              </div>
+              <p id="moneyAnalysisPeriod" class="money-analysis-period"></p>
+            </div>
+            <p id="moneyAnalysisCaption" class="muted"></p>
+            <p id="moneyChartsEmpty" class="empty-state" hidden></p>
+            <div id="moneyChartsContent" class="money-charts" hidden>
+              <section class="money-chart" aria-labelledby="moneyCategoryTitle">
+                <h4 id="moneyCategoryTitle">Where your money went</h4>
+                <p id="moneyCategoryInsight" class="money-chart-insight"></p>
+                <p class="muted money-chart-help">Choose a category to view its transactions below.</p>
+                <div id="moneyCategoryChart" class="money-category-chart"></div>
+              </section>
+              <section class="money-chart" aria-labelledby="moneyTrendTitle">
+                <h4 id="moneyTrendTitle">Spending over time</h4>
+                <p id="moneyTrendInsight" class="money-chart-insight"></p>
+                <p id="moneyTrendExplanation" class="muted money-chart-help"></p>
+                <ol id="moneyTrendChart" class="money-trend-chart"></ol>
+              </section>
+            </div>
           </section>
 
           <section id="moneyTelegram" class="money-panel money-telegram" aria-labelledby="moneyTelegramTitle" hidden>
@@ -191,7 +239,7 @@
           <section class="money-panel money-history" data-money-content aria-labelledby="moneyHistoryTitle">
             <div class="money-section-heading">
               <div>
-                <h3 id="moneyHistoryTitle">Transactions</h3>
+                <h3 id="moneyHistoryTitle" tabindex="-1">Transactions</h3>
                 <p id="moneyCount" class="muted" role="status"></p>
               </div>
               <div class="money-actions">
@@ -215,6 +263,10 @@
                   <option value="transfer">Transfer</option>
                 </select>
               </div>
+            </div>
+            <div id="moneyCategoryFilter" class="money-category-filter" hidden>
+              <span id="moneyCategoryFilterLabel"></span>
+              <button id="moneyClearCategory" class="subtle-button" type="button">All categories</button>
             </div>
             <p id="moneyEmpty" class="empty-state" hidden></p>
             <ul id="moneyList" class="money-list"></ul>
@@ -372,9 +424,11 @@
     <script src="reminder-form.js?v=3" defer></script>
     <script src="calendar-view.js?v=5" defer></script>
     <script src="money-model.js" defer></script>
+    <script src="money-analysis.js" defer></script>
+    <script src="money-charts.js" defer></script>
     <script src="money-repository.js?v=2" defer></script>
     <script src="money-live-sync.js" defer></script>
-    <script src="money-page.js?v=5" defer></script>
+    <script src="money-page.js?v=6" defer></script>
     <script src="telegram-link.js?v=2" defer></script>
     <script src="app.js?v=7" defer></script>
   </body>

@@ -19,11 +19,17 @@ Static frontend for the ClearDay reminder app.
 - `reminder-form.js`: add/edit dialog behavior
 - `calendar-view.js`: month, day, and events rendering
 - `money-model.js`: MYR amounts, categories, totals, and Money Flow backup conversion
+- `money-analysis.js`: Monday–Sunday weeks, calendar periods, and exact-sen spending aggregation
+- `money-charts.js`: labeled category and time charts, with category filtering
 - `money-repository.js`: signed-in transaction API and localhost preview storage
 - `money-page.js` and `money.css`: Money tab behavior and layout
 - `money-live-sync.js`: automatic refresh scheduling for the visible signed-in Money page
 - `app.js`: application state and navigation
 - `config.example.js`: example runtime config
+
+Money's Week, Month, Year, and All time controls apply to its totals, expense charts, and transaction list. Month charts group expenses into Monday–Sunday weeks clipped to the selected month. Transfers and income stay available in the list and totals. Spending charts use expense records. Select a category bar to view its transactions, then choose **All categories** to clear that filter. Existing automatic updates recalculate charts after records change.
+
+Run `node --test tests/money-analysis.test.cjs` to check period boundaries and chart totals. The frontend deployment workflow runs these tests before publishing.
 
 ## Local Preview
 

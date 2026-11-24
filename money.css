@@ -197,3 +197,248 @@
   min-height: 100px;
   margin: 0;
 }
+
+.money-period-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.money-period-tabs button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.money-period-tabs button:hover {
+  background: var(--surface);
+}
+
+.money-period-tabs button[aria-pressed="true"] {
+  border-color: var(--line);
+  color: var(--teal-dark);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.money-period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.money-period-controls > div {
+  min-width: 0;
+}
+
+.money-period-controls select {
+  min-width: 170px;
+}
+
+.money-period-label {
+  margin-top: 12px;
+}
+
+.money-analysis .eyebrow {
+  margin-bottom: 4px;
+}
+
+.money-analysis-period {
+  margin: 0;
+  color: var(--teal-dark);
+  font-weight: 700;
+}
+
+.money-analysis > .muted {
+  margin-top: 8px;
+}
+
+.money-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 24px;
+}
+
+.money-chart {
+  min-width: 0;
+}
+
+.money-chart h4 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.money-chart-insight {
+  margin-bottom: 6px;
+  color: var(--teal-dark);
+  font-size: 0.875rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.money-chart-help {
+  margin-bottom: 16px;
+  font-size: 0.8rem;
+}
+
+.money-category-chart {
+  display: grid;
+  gap: 4px;
+}
+
+.money-category-bar {
+  display: block;
+  width: 100%;
+  min-height: 74px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+.money-category-bar:hover,
+.money-category-bar[aria-pressed="true"] {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+}
+
+.money-category-bar[aria-pressed="true"] {
+  border-color: var(--teal);
+  box-shadow: inset 3px 0 var(--teal);
+}
+
+.money-bar-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 7px;
+  font-size: 0.875rem;
+}
+
+.money-bar-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.money-bar-value {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.money-bar-track {
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+.money-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--teal);
+}
+
+.money-bar-detail {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.money-trend-chart {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 10px 0;
+  list-style: none;
+}
+
+.money-trend-bar .money-bar-fill {
+  background: var(--blue);
+}
+
+.money-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--teal-dark);
+  background: var(--teal-soft);
+  font-size: 0.875rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+#moneyHistoryTitle {
+  scroll-margin-top: var(--sticky-clearance);
+}
+
+@media (max-width: 360px) {
+  .money-overview .money-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .money-period-tabs button {
+    padding-inline: 4px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .money-charts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .money-chart + .money-chart {
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 520px) {
+  .money-period-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .money-period-tabs {
+    width: 100%;
+  }
+
+  .money-period-tabs button {
+    flex: 1;
+    padding-inline: 7px;
+    font-size: 0.8rem;
+  }
+
+  .money-period-controls > div {
+    width: 100%;
+  }
+
+  .money-period-controls .money-actions {
+    justify-content: flex-end;
+  }
+}

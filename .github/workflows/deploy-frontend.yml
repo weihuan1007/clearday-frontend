@@ -41,6 +41,9 @@ jobs:
             node --check "$file"
           done
 
+      - name: Test spending analysis
+        run: node --test tests/money-analysis.test.cjs
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
@@ -114,6 +117,7 @@ jobs:
             --exclude ".github/*" \
             --exclude ".gitignore" \
             --exclude "README.md" \
+            --exclude "tests/*" \
             --exclude "index.html" \
             --exclude "config.js" \
             --exclude "config.example.js" \
@@ -139,4 +143,4 @@ jobs:
           set -euo pipefail
           aws cloudfront create-invalidation \
             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
-            --paths "/" "/index.html" "/config.js" "/auth.js" "/session-view.js" "/dates.js" "/storage.js" "/api.js" "/reminder-model.js" "/reminder-repository.js" "/reminder-form.js" "/calendar-view.js" "/app.js" "/styles.css" "/calendar.css" "/components.css" "/responsive.css" "/money-model.js" "/money-repository.js" "/money-page.js" "/money-live-sync.js" "/money.css" "/telegram-link.js"
+            --paths "/" "/index.html" "/config.js" "/auth.js" "/session-view.js" "/dates.js" "/storage.js" "/api.js" "/reminder-model.js" "/reminder-repository.js" "/reminder-form.js" "/calendar-view.js" "/app.js" "/styles.css" "/calendar.css" "/components.css" "/responsive.css" "/money-model.js" "/money-analysis.js" "/money-charts.js" "/money-repository.js" "/money-page.js" "/money-live-sync.js" "/money.css" "/telegram-link.js"
