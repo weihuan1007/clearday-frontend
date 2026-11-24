@@ -21,6 +21,7 @@ Static frontend for the ClearDay reminder app.
 - `money-model.js`: MYR amounts, categories, totals, and Money Flow backup conversion
 - `money-repository.js`: signed-in transaction API and localhost preview storage
 - `money-page.js` and `money.css`: Money tab behavior and layout
+- `money-live-sync.js`: automatic refresh scheduling for the visible signed-in Money page
 - `app.js`: application state and navigation
 - `config.example.js`: example runtime config
 

@@ -21,7 +21,8 @@
     const typeFilter = element("TypeFilter");
     const status = element("Status");
     const thisMonth = dates.toISO(new Date()).slice(0, 7);
-    const state = { records: [], month: thisMonth, editing: null, draftID: "", loaded: false, busy: false };
+    const state = { records: [], month: thisMonth, editing: null, draftID: "", loaded: false, busy: false, refreshing: false, version: 0 };
+    const liveSync = window.ClearDayMoneyLiveSync.create(refreshInBackground);
 
     if (personal) {
       unlockForm.addEventListener("submit", (event) => {
@@ -113,6 +114,7 @@
 
     function setBusy(busy) {
       state.busy = busy;
+      if (busy) state.version += 1;
       element("Add").disabled = busy || !state.loaded;
       element("Import").disabled = busy || !state.loaded;
       element("Export").disabled = busy || !state.loaded || !state.records.length;
@@ -124,6 +126,8 @@
     }
 
     function lock(message = "Enter your private Money key to open the ledger.") {
+      liveSync.stop();
+      state.version += 1;
       repository.setKey("");
       state.records = [];
       state.loaded = false;
@@ -161,6 +165,7 @@
       try {
         state.records = await repository.list();
         state.loaded = true;
+        if (repository.mode === "cloud") liveSync.start();
         status.textContent = repository.mode === "preview"
           ? "Local preview · records are saved only in this browser."
           : "Transactions are synced to your account.";
@@ -173,6 +178,43 @@
       } finally {
         setBusy(false);
         render();
+      }
+    }
+
+    function canAutoRefresh() {
+      return repository?.mode === "cloud" && state.loaded && !state.busy &&
+        !document.hidden && navigator.onLine && !dialog.open &&
+        !element("Page").hidden && !document.getElementById("appShell").hidden;
+    }
+
+    async function refreshInBackground() {
+      if (!canAutoRefresh() || state.refreshing) return;
+      const version = state.version;
+      state.refreshing = true;
+      try {
+        const records = await repository.list();
+        // An edit or import may have started while this request was in flight.
+        if (!canAutoRefresh() || version !== state.version) return;
+        if (JSON.stringify(records) !== JSON.stringify(state.records)) {
+          const active = document.activeElement;
+          const rowID = active.closest("[data-id]")?.dataset.id;
+          const action = active.dataset.moneyAction;
+          state.records = records;
+          render();
+          // Preserve keyboard position when changed rows replace the list.
+          if (rowID && action) {
+            const row = Array.from(list.children).find((item) => item.dataset.id === rowID);
+            const button = row?.querySelector('[data-money-action="' + action + '"]');
+            (button || element("Refresh")).focus({ preventScroll: true });
+          }
+        }
+        status.textContent = "Transactions are up to date. Automatic updates are on.";
+      } catch (error) {
+        if (version === state.version && canAutoRefresh()) {
+          status.textContent = "Could not refresh transactions. Retrying automatically.";
+        }
+      } finally {
+        state.refreshing = false;
       }
     }
 
